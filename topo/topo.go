@@ -48,7 +48,6 @@ func GetGlobalTopo() (ret MaybeTopo) {
 type Topo interface {
 	config.IOC
 
-	Scatter(config.Config) maybe.MaybeError
 	Lookup(int64) host.MaybeHost
 }
 
@@ -57,6 +56,10 @@ type MaybeTopo struct {
 
 	maybe.MaybeError
 	value Topo
+}
+
+func (this MaybeTopo) New(cfg config.Config, args ...int32) config.IOC {
+	panic("not implemented.")
 }
 
 func (this MaybeTopo) Value(value Topo) {

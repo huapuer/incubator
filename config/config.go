@@ -55,13 +55,13 @@ type Config struct {
 		//LocalOffset int32  `json:"LocalOffset`
 		//RemoteTable []RemoteEntry `json:"RemoteTable>Entry"`
 	} `json:"Topo"`
-	actors   []*Actor `json:"actors>Actor"`
+	actors   []*Actor `json:"Actors"`
 	Actors   map[string]*Actor
-	routers  []*Router `json:"routers>Router"`
+	routers  []*Router `json:"Routers"`
 	Routers  map[string]*Router
-	messages []*Message `json:"messages>Message"`
+	messages []*Message `json:"Messages"`
 	Messages map[int]*Message
-	hosts    []*Host `json:"actors>Host"`
+	hosts    []*Host `json:"Hosts"`
 	Hosts    map[string]*Host
 }
 

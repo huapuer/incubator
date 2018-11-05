@@ -3,7 +3,6 @@ package topo
 import (
 	"errors"
 	"fmt"
-	"incubator/common/maybe"
 	"incubator/config"
 	"incubator/host"
 )
@@ -45,15 +44,11 @@ func NewDefaultTopo(localNum int64, offset int32, localHostClass string, remoteH
 	return
 }
 
-func (this *defaultTopo) Scatter(config config.Config) (err maybe.MaybeError) {
-	return
-}
-
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 	return
 }
 
-func (this *defaultTopo) New(cfg config.Config) config.IOC {
+func (this *defaultTopo) New(cfg config.Config, args ...int32) config.IOC {
 	ret := MaybeTopo{}
 	topo := &defaultTopo{}
 	attrs := cfg.Topo.Attributes.(map[string]interface{})
@@ -111,18 +106,43 @@ func (this *defaultTopo) New(cfg config.Config) config.IOC {
 		return ret
 	}
 
+	entryNum := 0
 	if remoteEntries, ok := attrs["RemoteEntries"]; ok {
-		if entries, ok:=remoteEntries.([])
+		if entries, ok := remoteEntries.([]map[string]string); ok {
+			entryNum = len(entries)
+			for i := 0; i < entryNum; i++ {
+				topo.remoteHosts = append(
+					topo.remoteHosts, host.GetHostPrototype(topo.remoteHostClass).Right().(config.IOC).New(cfg, int32(i)).(host.MaybeHost).Right())
+			}
+		} else {
+			ret.Error(errors.New("attribute RemoteEntries has illegal type(expecting []map[string]string"))
+			return ret
+		}
 	} else {
 		ret.Error(errors.New("attribute RemoteEntries not found"))
 		return ret
 	}
 
-	for i := 0; int64(i) < topo.localNum; i++ {
-		localHost := host.GetHostPrototype(topo.localHostClass).Right()
-		//TODO: add shuffle logic here
-		localHost.SetId(int64(i))
-		topo.localHosts = append(topo.localHosts, localHost)
+	// init localHosts
+	if topo.localOffset != int32(entryNum) {
+		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localOffset, entryNum))
+		return ret
+	}
+
+	totalCount := 0
+	initCount := 0
+	for {
+		if int32(totalCount%entryNum) == topo.localOffset {
+			localHost := host.GetHostPrototype(topo.localHostClass).Right()
+			localHost.SetId(int64(totalCount))
+			topo.localHosts = append(topo.localHosts, localHost)
+			initCount++
+
+			if int64(initCount) == topo.localNum {
+				break
+			}
+		}
+		totalCount++
 	}
 
 	return ret

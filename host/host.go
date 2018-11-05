@@ -77,6 +77,6 @@ func (this MaybeHost) Right() Host {
 	return this.value
 }
 
-func (this MaybeHost) New(cfg config.Config) config.IOC {
+func (this MaybeHost) New(cfg config.Config, args ...int32) config.IOC {
 	panic("not implemented.")
 }

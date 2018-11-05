@@ -1,5 +1,5 @@
 package config
 
 type IOC interface {
-	New(Config) IOC
+	New(Config, ...int32) IOC
 }

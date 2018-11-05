@@ -55,7 +55,7 @@ type MaybeRouter struct {
 	value Router
 }
 
-func (this MaybeRouter) New(cfg config.Config) config.IOC {
+func (this MaybeRouter) New(cfg config.Config, args ...int32) config.IOC {
 	panic("not implemented.")
 }
 
