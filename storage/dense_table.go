@@ -3,7 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"incubator/common/maybe"
+	"../common/maybe"
 )
 
 type TableConfig struct {

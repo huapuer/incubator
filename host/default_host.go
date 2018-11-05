@@ -2,10 +2,10 @@ package host
 
 import (
 	"fmt"
-	"incubator/common/maybe"
-	"incubator/config"
-	"incubator/message"
-	"incubator/network"
+	"../common/maybe"
+	"../config"
+	"../message"
+	"../network"
 )
 
 const (

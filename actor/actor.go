@@ -3,9 +3,9 @@ package actor
 import (
 	"context"
 	"fmt"
-	"incubator/common/maybe"
-	"incubator/config"
-	"incubator/message"
+	"../common/maybe"
+	"../config"
+	"../message"
 )
 
 var (

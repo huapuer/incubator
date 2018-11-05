@@ -3,9 +3,9 @@ package topo
 import (
 	"errors"
 	"fmt"
-	"incubator/common/maybe"
-	"incubator/config"
-	"incubator/host"
+	"../common/maybe"
+	"../config"
+	"../host"
 )
 
 var (
