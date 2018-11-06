@@ -1,8 +1,8 @@
 package network
 
 import (
-	"incubator/common/maybe"
-	"incubator/message"
+	"../common/maybe"
+	"../message"
 	"net"
 )
 

@@ -2,8 +2,8 @@ package network
 
 import (
 	"errors"
-	"incubator/common/maybe"
-	"incubator/message"
+	"../common/maybe"
+	"../message"
 )
 
 type defaultServer struct {

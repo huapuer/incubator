@@ -3,11 +3,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"incubator/actor"
-	"incubator/common/maybe"
-	"incubator/message"
-	"incubator/router"
-	"incubator/topo"
+	"../actor"
+	"../common/maybe"
+	"../message"
+	"../router"
+	"../topo"
 	"io/ioutil"
 )
 

@@ -3,8 +3,8 @@ package topo
 import (
 	"errors"
 	"fmt"
-	"incubator/config"
-	"incubator/host"
+	"../config"
+	"../host"
 )
 
 const (
