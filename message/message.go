@@ -19,12 +19,13 @@ var (
 	messageRouters   = make(map[int]router.Router)
 )
 
-func RegisterMessagePrototype(name string, val Message) {
+func RegisterMessagePrototype(name string, val Message) (err maybe.MaybeError){
 	if _, ok := messagePrototype[name]; ok {
-		logrus.Errorf("message prototype redefined: %s", name)
-		os.Exit(1)
+		err.Error(fmt.Errorf("message prototype redefined: %s", name))
+		return
 	}
 	messagePrototype[name] = val
+	return
 }
 
 func RegisterMessageCanonical(cfg config.Config, typ int) (err maybe.MaybeError) {

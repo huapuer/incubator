@@ -9,6 +9,14 @@ import (
 	"unsafe"
 )
 
+const (
+	pullUpMessageClassName = "message.pullUpMessage"
+)
+
+func init(){
+	RegisterMessagePrototype(pullUpMessageClassName, &pullUpMessage{}).Test()
+}
+
 type pullUpMessage struct {
 	commonMessage
 	cfg *config.Config
