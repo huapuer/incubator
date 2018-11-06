@@ -3,10 +3,10 @@ package router
 import (
 	"errors"
 	"fmt"
-	"incubator/actor"
-	"incubator/common/maybe"
-	"incubator/config"
-	"incubator/message"
+	"../actor"
+	"../common/maybe"
+	"../config"
+	"../message"
 	"runtime"
 )
 

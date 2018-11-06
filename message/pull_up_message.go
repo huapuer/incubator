@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"incubator/common/maybe"
-	"incubator/config"
+	"../common/maybe"
+	"../config"
 	"unsafe"
 )
 
