@@ -41,17 +41,17 @@ func RegisterMessageCanonical(cfg config.Config, typ int) (err maybe.MaybeError)
 		return
 	}
 	if c, ok := cfg.Messages[typ]; ok {
-		if p, ok := messagePrototype[c.ClassName]; ok {
-			if rc, ok := cfg.Routers[c.Router]; ok {
+		if p, ok := messagePrototype[c.Class]; ok {
+			if rc, ok := cfg.Routers[c.RouterClass]; ok {
 				p.SetType(typ)
 				messageCanonical[typ] = p
-				r := router.GetRouter(rc.ClassName).Right()
+				r := router.GetRouter(rc.Class).Right()
 				messageRouters[typ] = r
 			}
-			err.Error(fmt.Errorf("router config for message type not found: %d, %d", typ, c.Router))
+			err.Error(fmt.Errorf("router config for message type not found: %d, %d", typ, c.RouterClass))
 			return
 		}
-		err.Error(fmt.Errorf("message prototype not found: %d", c.ClassName))
+		err.Error(fmt.Errorf("message prototype not found: %d", c.Class))
 		return
 	}
 	err.Error(fmt.Errorf("message config not found: %d", typ))
@@ -84,11 +84,13 @@ func Route(m Message) (err maybe.MaybeError) {
 type Message interface {
 	SetType(int) maybe.MaybeError
 	GetType() maybe.MaybeInt
-	GetSize() maybe.MaybeInt
+	GetSize() int
 	Process(context.Context) maybe.MaybeError
 	GetHostId() maybe.MaybeInt64
 	SetHostId(int64) maybe.MaybeError
 	Marshal() []byte
+	GetJsonBytes() maybe.MaybeBytes
+	SetJsonField([]byte) maybe.MaybeError
 	Unmarshal([]byte) MaybeMessage
 }
 
@@ -158,23 +160,81 @@ func (this *commonMessage) SetHostId(seed int64) (err maybe.MaybeError) {
 }
 
 type mimicSlice struct {
-	Addr *unsafe.ArbitraryType
+	addr *unsafe.ArbitraryType
 	len  int
 	cap  int
 }
 
+type mimicIFace struct {
+	tab  unsafe.Pointer
+	data unsafe.Pointer
+}
+
 func (this *commonMessage) Marshal() (ret []byte) {
-	size := this.GetDerived().(Message).GetSize().Right()
-	ms := &mimicSlice{unsafe.Pointer(this), size, size}
+	derived := this.GetDerived()
+	mi := (*mimicIFace)(unsafe.Pointer(&derived))
+
+	msg := this.GetDerived().(Message)
+	size := msg.GetSize()
+	ms := &mimicSlice{mi.data, size, size}
 	val := *(*[]byte)(unsafe.Pointer(ms))
-	typ := this.GetDerived().(Message).GetType().Right()
-	lth := len(val) + 2
-	ret = append(ret, uint8(lth), uint8(typ))
+
+	typ := msg.GetType().Right()
+	jbytes := msg.GetJsonBytes().Right()
+	jlth := len(jbytes)
+	lth := len(val) + jlth + 2
+
+	ret = append(ret, uint8(lth), uint8(len(val)), uint8(typ))
 	ret = append(ret, val...)
+	if jlth > 0 {
+		ret = append(ret, jbytes...)
+	}
+
 	return
 }
 
-func (this *commonMessage) Unmarshal(ret []byte) (msg MaybeMessage) {
-	msg.Error(errors.New("calling abstract method:commonMessage.Unmarshal()"))
+func (this *commonMessage) Unmarshal(data []byte) (msg MaybeMessage) {
+	l := len(data)
+	if l < 3 {
+		msg.Error(fmt.Errorf("message bytes too short: %d", l))
+		return
+	}
+	lth := int(data[0])
+	if lth < 0 {
+		msg.Error(fmt.Errorf("message claims negative lenth: %d", lth))
+		return
+	}
+	if l != lth {
+		msg.Error(fmt.Errorf("message length not equal to claimed, %d != %d", l, lth))
+		return
+	}
+
+	lval := int(data[1])
+	if lth < 0 {
+		msg.Error(fmt.Errorf("message claims negative binary length: %d", lval))
+		return
+	}
+	if lth < lval+2 {
+		msg.Error(fmt.Errorf("message length shorter than claimed binary length + header length, %d  < %d + 2", l, lval))
+		return
+	}
+
+	val := data[2 : lval+2]
+
+	ms := (*mimicSlice)(unsafe.Pointer(&val))
+
+	derived := this.GetDerived().(Message)
+
+	mt := (*mimicIFace)(unsafe.Pointer(&derived))
+	mi := (*mimicIFace)(unsafe.Pointer(&msg.value))
+	mi.data = ms.addr
+	mi.tab = mt.tab
+
+	ljsn := lth - lval - 2
+	if ljsn > 0 {
+		jsn := data[lval+2 : lth]
+		derived.SetJsonField(jsn).Test()
+	}
+
 	return
 }

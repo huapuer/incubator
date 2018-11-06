@@ -7,31 +7,32 @@ import (
 	"incubator/common/maybe"
 	"incubator/config"
 	"incubator/message"
+	"runtime"
 )
 
 const (
-	defaultRouterClassName = "router.defaultRouter"
+	spikeRouterClassName = "router.defaultRouter"
 )
 
 func init() {
-	RegisterRouterPrototype(defaultRouterClassName, &defaultRouter{}).Test()
+	RegisterRouterPrototype(spikeRouterClassName, &defaultRouter{}).Test()
 }
 
-type spikeRouter struct {
+type defaultRouter struct {
 	actors    []actor.Actor
 	actorsNum int
 }
 
-func (this spikeRouter) New(cfg config.Config, args ...int32) config.IOC {
+func (this defaultRouter) New(cfg config.Config, args ...int32) config.IOC {
 	ret := MaybeRouter{}
-	if router, ok := cfg.Routers[defaultRouterClassName]; ok {
+	if router, ok := cfg.Routers[spikeRouterClassName]; ok {
 		return newDefaultRouter(router.ActorClass)
 	}
-	ret.Error(fmt.Errorf("no router class cfg found: %s", defaultRouterClassName))
+	ret.Error(fmt.Errorf("no router class cfg found: %s", spikeRouterClassName))
 	return ret
 }
 
-func newSpikeRouter(actorClassName string) (this MaybeRouter) {
+func newDefaultRouter(actorClassName string) (this MaybeRouter) {
 	actors, err := actor.GetActors(actorClassName)
 	err.Test()
 	if len(actors) < 1 {
@@ -45,7 +46,7 @@ func newSpikeRouter(actorClassName string) (this MaybeRouter) {
 	return
 }
 
-func (this spikeRouter) Route(msg message.Message) (err maybe.MaybeError) {
+func (this defaultRouter) Route(msg message.Message) (err maybe.MaybeError) {
 	seed := msg.GetHostId().Right()
 	if seed < 0 {
 		err.Error(fmt.Errorf("illegal hash seed: %d", seed))
@@ -53,6 +54,8 @@ func (this spikeRouter) Route(msg message.Message) (err maybe.MaybeError) {
 	}
 
 	this.actors[seed%int64(this.actorsNum)].Receive(msg).Test()
+
+	runtime.Gosched()
 
 	return
 }
