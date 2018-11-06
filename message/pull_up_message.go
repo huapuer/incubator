@@ -23,7 +23,7 @@ type pullUpMessage struct {
 }
 
 func (this *pullUpMessage) Process(ctx context.Context) (err maybe.MaybeError) {
-
+	this.cfg.Process().Test()
 	return
 }
 
