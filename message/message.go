@@ -195,7 +195,7 @@ func (this *commonMessage) Marshal() (ret []byte) {
 
 func (this *commonMessage) Unmarshal(data []byte) (msg MaybeMessage) {
 	l := len(data)
-	if l < 3 {
+	if l < 4 {
 		msg.Error(fmt.Errorf("message bytes too short: %d", l))
 		return
 	}
@@ -214,8 +214,8 @@ func (this *commonMessage) Unmarshal(data []byte) (msg MaybeMessage) {
 		msg.Error(fmt.Errorf("message claims negative binary length: %d", lval))
 		return
 	}
-	if lth < lval+2 {
-		msg.Error(fmt.Errorf("message length shorter than claimed binary length + header length, %d  < %d + 2", l, lval))
+	if lth < lval+3 {
+		msg.Error(fmt.Errorf("message length shorter than claimed binary length + header length, %d  < %d + 3", l, lval))
 		return
 	}
 

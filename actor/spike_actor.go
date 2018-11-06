@@ -32,7 +32,7 @@ func (this spikeActor) New(cfg config.Config, args ...int32) config.IOC {
 		attrs := actor.Attributes.(map[string]string)
 		if size, ok := attrs["MailBoxSize"]; ok {
 			if mailBoxSize, err := strconv.Atoi(size); err == nil {
-				return NewDefaultActor(int64(mailBoxSize))
+				return NewSpikeActor(int64(mailBoxSize))
 			}
 			ret.Error(fmt.Errorf("illegal actor attribute: %s=%s", "MailBoxSize", size))
 			return ret
@@ -44,7 +44,7 @@ func (this spikeActor) New(cfg config.Config, args ...int32) config.IOC {
 	return ret
 }
 
-func NewLazyActor(taskChanSize int64) (this MaybeActor) {
+func NewSpikeActor(taskChanSize int64) (this MaybeActor) {
 	if taskChanSize <= 0 {
 		this.Error(fmt.Errorf("wrong task chan size: %d", taskChanSize))
 		return
