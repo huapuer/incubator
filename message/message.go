@@ -9,6 +9,7 @@ import (
 	"../config"
 	"../router"
 	"unsafe"
+	"github.com/incubator/topo"
 )
 
 var (
@@ -77,6 +78,14 @@ func Route(m Message) (err maybe.MaybeError) {
 		r.Route(m)
 	}
 	err.Error(fmt.Errorf("router for message type not found: %d", m.GetType().Right()))
+	return
+}
+
+func SendTo(m Message, hostId int64) (err maybe.MaybeError) {
+	if hostId < 0 {
+		err.Error(fmt.Errorf("illegal host id: %d", hostId))
+	}
+	topo.GetGlobalTopo().Right().Lookup(hostId).Right().Receive(m).Test()
 	return
 }
 

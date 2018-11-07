@@ -26,7 +26,7 @@ type spikeActor struct {
 	mutex   *sync.Mutex
 }
 
-func (this spikeActor) New(cfg config.Config, args ...int32) config.IOC {
+func (this spikeActor) New(cfg config.Config) config.IOC {
 	ret := MaybeActor{}
 	if actor, ok := cfg.Actors[spikeActorClassName]; ok {
 		attrs := actor.Attributes.(map[string]string)

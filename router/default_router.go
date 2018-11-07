@@ -22,7 +22,7 @@ type spikeRouter struct {
 	actorsNum int
 }
 
-func (this spikeRouter) New(cfg config.Config, args ...int32) config.IOC {
+func (this spikeRouter) New(cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
 	if router, ok := cfg.Routers[defaultRouterClassName]; ok {
 		return newDefaultRouter(router.ActorClass)

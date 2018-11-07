@@ -16,47 +16,27 @@ func init() {
 }
 
 type defaultTopo struct {
-	localNum        int64
-	localOffset     int32
+	totalHostNum    int64
+	localHostMod    int32
 	localHostClass  string
 	remoteHostClass string
 	localHosts      []host.Host
 	remoteHosts     []host.Host
 }
 
-func NewDefaultTopo(localNum int64, offset int32, localHostClass string, remoteHostClass string) (ret MaybeTopo) {
-	if localNum <= 0 {
-		ret.Error(fmt.Errorf("illegal local num: %d", localNum))
-		return
-	}
-	if offset <= 0 {
-		ret.Error(fmt.Errorf("illegal offset: %d", localNum))
-		return
-	}
-	if localHostClass == "" {
-		ret.Error(errors.New("empty local host class name"))
-		return
-	}
-	if remoteHostClass == "" {
-		ret.Error(errors.New("empty local host class name"))
-		return
-	}
-	return
-}
-
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 	return
 }
 
-func (this *defaultTopo) New(cfg config.Config, args ...int32) config.IOC {
+func (this *defaultTopo) New(cfg config.Config) config.IOC {
 	ret := MaybeTopo{}
 	topo := &defaultTopo{}
 	attrs := cfg.Topo.Attributes.(map[string]interface{})
-	if localNum, ok := attrs["LocalNum"]; ok {
-		if localNumInt, ok := localNum.(int64); ok {
-			topo.localNum = localNumInt
+	if totalHostNum, ok := attrs["TotalHostNum"]; ok {
+		if localNumInt, ok := totalHostNum.(int64); ok {
+			topo.totalHostNum = localNumInt
 		} else {
-			ret.Error(fmt.Errorf("local host num cfg type error(expecting int): %+v", localNum))
+			ret.Error(fmt.Errorf("total host num cfg type error(expecting int): %+v", totalHostNum))
 			return ret
 		}
 	} else {
@@ -64,11 +44,11 @@ func (this *defaultTopo) New(cfg config.Config, args ...int32) config.IOC {
 		return ret
 	}
 
-	if localOffset, ok := attrs["LocalOffset"]; ok {
-		if localOffsetInt, ok := localOffset.(int32); ok {
-			topo.localOffset = int32(localOffsetInt)
+	if localHostMod, ok := attrs["LocalHostMod"]; ok {
+		if localHostMod, ok := localHostMod.(int32); ok {
+			topo.localHostMod = int32(localHostMod)
 		} else {
-			ret.Error(fmt.Errorf("local host offset cfg type error(expecting int): %+v", localOffset))
+			ret.Error(fmt.Errorf("local host mod cfg type error(expecting int): %+v", localHostMod))
 			return ret
 		}
 	} else {
@@ -124,25 +104,17 @@ func (this *defaultTopo) New(cfg config.Config, args ...int32) config.IOC {
 	}
 
 	// init localHosts
-	if topo.localOffset != int32(entryNum) {
-		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localOffset, entryNum))
+	if topo.localHostMod != int32(entryNum) {
+		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localHostMod, entryNum))
 		return ret
 	}
 
-	totalCount := 0
-	initCount := 0
-	for {
-		if int32(totalCount%entryNum) == topo.localOffset {
+	for i:=0;i<topo.totalHostNum;i++ {
+		if int32(i%entryNum) == topo.localHostMod {
 			localHost := host.GetHostPrototype(topo.localHostClass).Right()
-			localHost.SetId(int64(totalCount))
+			localHost.SetId(int64(i))
 			topo.localHosts = append(topo.localHosts, localHost)
-			initCount++
-
-			if int64(initCount) == topo.localNum {
-				break
-			}
 		}
-		totalCount++
 	}
 
 	return ret

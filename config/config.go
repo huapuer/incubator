@@ -47,12 +47,12 @@ type Host struct {
 
 type Config struct {
 	Topo struct {
-		ClassName  string      `json:"Topology"`
-		Attributes interface{} `json:"Attributes"`
+	     Class      string      `json:"Topology"`
+	     Attributes interface{} `json:"Attributes"`
 		//LocalHostClass  string `json:"LocalHost"`
 		//RemoteHostClass string `json:"LocalHost"`
-		//LocalNum    int64         `json:"LocalNum"`
-		//LocalOffset int32  `json:"LocalOffset`
+		//TotalHostNum    int64         `json:"TotalHostNum"`
+		//LocalHostMod int32  `json:"LocalHostMod`
 		//RemoteTable []RemoteEntry `json:"RemoteTable>Entry"`
 	} `json:"Topo"`
 	actors   []*Actor `json:"Actors"`

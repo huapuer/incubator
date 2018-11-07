@@ -22,7 +22,7 @@ type defaultActor struct {
 	mailbox chan message.Message
 }
 
-func (this defaultActor) New(cfg config.Config, args ...int32) config.IOC {
+func (this defaultActor) New(cfg config.Config) config.IOC {
 	ret := MaybeActor{}
 	if actor, ok := cfg.Actors[defaultActorClassName]; ok {
 		attrs := actor.Attributes.(map[string]string)

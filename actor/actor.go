@@ -64,7 +64,7 @@ type MaybeActor struct {
 	value Actor
 }
 
-func (this MaybeActor) New(cfg config.Config, args ...int32) config.IOC {
+func (this MaybeActor) New(cfg config.Config) config.IOC {
 	panic("not implemented.")
 }
 

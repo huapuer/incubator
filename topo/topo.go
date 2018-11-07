@@ -27,12 +27,12 @@ func SetGlobalTopo(cfg config.Config) (err maybe.MaybeError) {
 		err.Error(errors.New("global topo has been set"))
 		return
 	}
-	if prototype, ok := topoPrototype[cfg.Topo.ClassName]; ok {
+	if prototype, ok := topoPrototype[cfg.Topo.Class]; ok {
 		topo := prototype.New(cfg).(MaybeTopo).Right()
 		globalTopo = topo
 		return
 	}
-	err.Error(fmt.Errorf("topo prototype not found: %s", cfg.Topo.ClassName))
+	err.Error(fmt.Errorf("topo prototype not found: %s", cfg.Topo.Class))
 	return
 }
 
@@ -58,7 +58,7 @@ type MaybeTopo struct {
 	value Topo
 }
 
-func (this MaybeTopo) New(cfg config.Config, args ...int32) config.IOC {
+func (this MaybeTopo) New(cfg config.Config) config.IOC {
 	panic("not implemented.")
 }
 

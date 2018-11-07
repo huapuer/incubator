@@ -28,7 +28,7 @@ func (this *defaultLocalHost) Receive(msg message.Message) (err maybe.MaybeError
 	return
 }
 
-func (this defaultLocalHost) New(cfg config.Config, args ...int32) config.IOC {
+func (this defaultLocalHost) New(cfg config.Config) config.IOC {
 	ret := MaybeHost{}
 	if host, ok := cfg.Hosts[defaultLocalHostClassName]; ok {
 		//TODO: real logic

@@ -23,7 +23,7 @@ type defaultRouter struct {
 	actorsNum int
 }
 
-func (this defaultRouter) New(cfg config.Config, args ...int32) config.IOC {
+func (this defaultRouter) New(cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
 	if router, ok := cfg.Routers[spikeRouterClassName]; ok {
 		return newDefaultRouter(router.ActorClass)
