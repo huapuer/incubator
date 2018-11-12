@@ -22,13 +22,13 @@ type defaultActor struct {
 	mailbox chan message.Message
 }
 
-func (this defaultActor) New(cfg config.Config) config.IOC {
+func (this defaultActor) New(cfg interface{}) config.IOC {
 	ret := MaybeActor{}
-	if actor, ok := cfg.Actors[defaultActorClassName]; ok {
-		attrs := actor.Attributes.(map[string]string)
+	if attrs, ok := cfg.(map[string]string); ok{
 		if size, ok := attrs["MailBoxSize"]; ok {
 			if mailBoxSize, err := strconv.Atoi(size); err == nil {
-				return NewDefaultActor(int64(mailBoxSize))
+				ret.Value(newDefaultActor(int64(mailBoxSize)).Right())
+				return ret
 			}
 			ret.Error(fmt.Errorf("illegal actor attribute: %s=%s", "MailBoxSize", size))
 			return ret
@@ -36,11 +36,11 @@ func (this defaultActor) New(cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("no actor attribute found: %s", "MailBoxSize"))
 		return ret
 	}
-	ret.Error(fmt.Errorf("no actor class cfg found: %s", defaultActorClassName))
+	ret.Error(fmt.Errorf("illegal cfg type when new actor %s", defaultActorClassName))
 	return ret
 }
 
-func NewDefaultActor(taskChanSize int64) (this MaybeActor) {
+func newDefaultActor(taskChanSize int64) (this MaybeActor) {
 	if taskChanSize <= 0 {
 		this.Error(fmt.Errorf("wrong task chan size: %d", taskChanSize))
 		return

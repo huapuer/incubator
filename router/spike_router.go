@@ -18,21 +18,26 @@ func init() {
 	RegisterRouterPrototype(spikeRouterClassName, &defaultRouter{}).Test()
 }
 
-type defaultRouter struct {
+type spikeRouter struct {
 	actors    []actor.Actor
 	actorsNum int
 }
 
-func (this defaultRouter) New(cfg config.Config) config.IOC {
+func (this spikeRouter) New(cfg interface{}) config.IOC {
 	ret := MaybeRouter{}
-	if router, ok := cfg.Routers[spikeRouterClassName]; ok {
-		return newDefaultRouter(router.ActorClass)
+	if attrs, ok := cfg.(map[string]string); ok{
+		if actorClass, ok := attrs["ActorClass"]; ok {
+			ret.Value(newSpikeRouter(actorClass).Right())
+			return ret
+		}
+		ret.Error(fmt.Errorf("no actor attribute found: %s", "MailBoxSize"))
+		return ret
 	}
-	ret.Error(fmt.Errorf("no router class cfg found: %s", spikeRouterClassName))
+	ret.Error(fmt.Errorf("illegal cfg type when new router %s", spikeRouterClassName))
 	return ret
 }
 
-func newDefaultRouter(actorClassName string) (this MaybeRouter) {
+func newSpikeRouter(actorClassName string) (this MaybeRouter) {
 	actors, err := actor.GetActors(actorClassName)
 	err.Test()
 	if len(actors) < 1 {
@@ -46,7 +51,7 @@ func newDefaultRouter(actorClassName string) (this MaybeRouter) {
 	return
 }
 
-func (this defaultRouter) Route(msg message.Message) (err maybe.MaybeError) {
+func (this spikeRouter) Route(msg message.Message) (err maybe.MaybeError) {
 	seed := msg.GetHostId().Right()
 	if seed < 0 {
 		err.Error(fmt.Errorf("illegal hash seed: %d", seed))

@@ -28,15 +28,10 @@ func (this *defaultLocalHost) Receive(msg message.Message) (err maybe.MaybeError
 	return
 }
 
-func (this defaultLocalHost) New(cfg config.Config) config.IOC {
+func (this defaultLocalHost) New(cfg interface{}) config.IOC {
 	ret := MaybeHost{}
-	if host, ok := cfg.Hosts[defaultLocalHostClassName]; ok {
-		//TODO: real logic
-		host = host
-		ret.Value(&defaultLocalHost{})
-		return ret
-	}
-	ret.Error(fmt.Errorf("no host class cfg found: %s", defaultLocalHostClassName))
+	//TODO: real logic
+	ret.Value(&defaultLocalHost{})
 	return ret
 }
 
@@ -53,14 +48,10 @@ func (this *defaultRemoteHost) Receive(msg message.Message) (err maybe.MaybeErro
 	return
 }
 
-func (this defaultRemoteHost) New(cfg config.Config) config.IOC {
+func (this defaultRemoteHost) New(cfg interface{}) config.IOC {
 	ret := MaybeHost{}
-	if host, ok := cfg.Hosts[defaultRemoteHostClassName]; ok {
-		//TODO: real logic
-		host = host
-		ret.Value(&defaultLocalHost{})
-		return ret
-	}
-	ret.Error(fmt.Errorf("no host class cfg found: %s", defaultRemoteHostClassName))
+	//TODO: real logic
+	ret.Value(&defaultLocalHost{})
+	return ret
 	return ret
 }
