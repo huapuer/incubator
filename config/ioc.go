@@ -1,5 +1,5 @@
 package config
 
 type IOC interface {
-	New(interface{}) IOC
+	New(interface{}, Config) IOC
 }

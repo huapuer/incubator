@@ -1,13 +1,13 @@
 package actor
 
 import (
+	c "../context"
 	"context"
 	"errors"
 	"fmt"
 	"../common/maybe"
 	"../config"
 	"../message"
-	"strconv"
 )
 
 const (
@@ -19,34 +19,39 @@ func init() {
 }
 
 type defaultActor struct {
+	commonActor
+
 	mailbox chan message.Message
 }
 
-func (this defaultActor) New(cfg interface{}) config.IOC {
+func (this defaultActor) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeActor{}
-	if attrs, ok := cfg.(map[string]string); ok{
-		if size, ok := attrs["MailBoxSize"]; ok {
-			if mailBoxSize, err := strconv.Atoi(size); err == nil {
-				ret.Value(newDefaultActor(int64(mailBoxSize)).Right())
-				return ret
-			}
-			ret.Error(fmt.Errorf("illegal actor attribute: %s=%s", "MailBoxSize", size))
-			return ret
-		}
+	if attrs == nil{
+		ret.Error(errors.New("actor attrs is nil"))
+		return ret
+	}
+	attrsMap, ok := attrs.(map[string]interface{})
+	if !ok{
+		ret.Error(fmt.Errorf("illegal cfg type when new actor %s", defaultActorClassName))
+		return ret
+	}
+	size, ok := attrsMap["MailBoxSize"]
+	if !ok{
 		ret.Error(fmt.Errorf("no actor attribute found: %s", "MailBoxSize"))
 		return ret
 	}
-	ret.Error(fmt.Errorf("illegal cfg type when new actor %s", defaultActorClassName))
-	return ret
-}
-
-func newDefaultActor(taskChanSize int64) (this MaybeActor) {
-	if taskChanSize <= 0 {
-		this.Error(fmt.Errorf("wrong task chan size: %d", taskChanSize))
-		return
+	sizeInt, ok := size.(int)
+	if !ok {
+		ret.Error(fmt.Errorf("actor mailbox size cfg type error(expecting int): %+v", size))
+		return ret
 	}
-	this.Value(&defaultActor{make(chan message.Message, taskChanSize)})
-	return
+	if sizeInt <= 0 {
+		ret.Error(fmt.Errorf("illegal actor mailbox size: %d", sizeInt))
+		return ret
+	}
+	ret.Value(&defaultActor{mailbox: make(chan message.Message, sizeInt)})
+
+	return ret
 }
 
 func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
@@ -64,6 +69,9 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 			case m := <-this.mailbox:
 				maybe.TryCatch(
 					func() {
+						ctx := c.MessageContext{
+							Topo: this.Topo,
+						}
 						m.Process(ctx).Test()
 					}, nil)
 			}

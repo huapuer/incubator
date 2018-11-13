@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"../actor"
 	"../common/maybe"
 	"../message"
 	"../router"
@@ -11,26 +10,23 @@ import (
 	"io/ioutil"
 )
 
-type RemoteEntry struct {
-	FromOffset int64  `json:"FromOffset"`
-	ToOffset   int64  `json:"ToOffset""`
-	Address    string `json:"Address"`
-}
+var(
+	topoIndex = 0
+)
 
-type Attribute struct {
-	Key   string `json:"Key"`
-	Value string `json:"Value"`
-}
+const(
+	spacePerTopo = 100
+)
 
 type Actor struct {
+	Schema       int32       `json:"Schema"`
 	Class      string      `json:"Class"`
-	ActorNum   int         `json:ActorNum`
 	Attributes interface{} `json:"Attributes"`
 }
 
 type Router struct {
+	Id         int32       `json:"Id"`
 	Class      string      `json:"Class"`
-	ActorClass string      `json:"ActorClass"`
 	Attributes interface{} `json:"Attributes"`
 }
 
@@ -56,7 +52,7 @@ type Config struct {
 		//RemoteTable []RemoteEntry `json:"RemoteTable>Entry"`
 	} `json:"Topo"`
 	actors   []*Actor `json:"Actors"`
-	Actors   map[string]*Actor
+	Actors   map[int32]*Actor
 	routers  []*Router `json:"Routers"`
 	Routers  map[string]*Router
 	messages []*Message `json:"Messages"`
@@ -65,26 +61,22 @@ type Config struct {
 	Hosts    map[string]*Host
 }
 
-var (
-	GlobalConfig Config
-)
-
 func init() {
 	configFile, err := ioutil.ReadFile("conf/main.xml")
 	if err != nil {
 		panic(err)
 	}
-	GlobalConfig = Config{
-		Actors:   make(map[string]*Actor),
+	cfg := Config{
+		Actors:   make(map[int32]*Actor),
 		Routers:  make(map[string]*Router),
 		Messages: make(map[int]*Message),
 	}
-	err = json.Unmarshal(configFile, &GlobalConfig)
+	err = json.Unmarshal(configFile, &cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	GlobalConfig.Process().Test()
+	cfg.Process().Test()
 }
 
 func (this Config) Process() (err maybe.MaybeError) {
@@ -92,8 +84,7 @@ func (this Config) Process() (err maybe.MaybeError) {
 		if a.Class == "" {
 			err.Error(fmt.Errorf("actor class name not set: index[%d]", i))
 		}
-		this.Actors[a.Class] = a
-		actor.AddActors(this, a.Class, a.ActorNum).Test()
+		this.Actors[a.Schema] = a
 	}
 
 	for i, r := range this.routers {
@@ -101,15 +92,17 @@ func (this Config) Process() (err maybe.MaybeError) {
 			err.Error(fmt.Errorf("router class name not set: index[%d]", i))
 		}
 		this.Routers[r.Class] = r
-		router.AddRouter(this, r.Class).Test()
+		id := int32(topoIndex * spacePerTopo) + r.Id
+		router.AddRouter(id, r.Class, this).Test()
 	}
 
 	for i, m := range this.messages {
 		if m.Type <= 0 {
 			err.Error(fmt.Errorf("illegal message type: %d, index[%d]", m.Type, i))
 		}
-		this.Messages[m.Type] = m
-		message.RegisterMessageCanonical(this, m.Type)
+		typ := topoIndex * spacePerTopo + m.Type
+		this.Messages[typ] = m
+		message.RegisterMessageCanonical(this, typ).Test()
 	}
 
 	for i, h := range this.hosts {
@@ -119,7 +112,8 @@ func (this Config) Process() (err maybe.MaybeError) {
 		this.Hosts[h.Class] = h
 	}
 
-	topo.SetGlobalTopo(this)
+	topo.SetTopo(int32(topoIndex), this)
+	topoIndex++
 
 	return
 }

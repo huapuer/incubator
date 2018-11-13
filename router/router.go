@@ -9,7 +9,7 @@ import (
 
 var (
 	routerPrototype = make(map[string]Router)
-	routers         = make(map[string]Router)
+	routers         = make(map[int32]Router)
 )
 
 func RegisterRouterPrototype(name string, val Router) (err maybe.MaybeError) {
@@ -21,26 +21,31 @@ func RegisterRouterPrototype(name string, val Router) (err maybe.MaybeError) {
 	return
 }
 
-func AddRouter(cfg config.Config, name string) (err maybe.MaybeError) {
-	if _, ok := routers[name]; ok {
-		err.Error(fmt.Errorf("router already exists: %s", name))
+func AddRouter(id int32, className string, cfg config.Config) (err maybe.MaybeError) {
+	if _, ok := routers[id]; ok {
+		err.Error(fmt.Errorf("router already exists: %s", className))
 		return
 	}
-	if prototype, ok := routerPrototype[name]; ok {
-		newRouter := prototype.New(cfg).(MaybeRouter).Right()
-		routers[name] = newRouter
+	if prototype, ok := routerPrototype[className]; ok {
+		routerCfg, ok := cfg.Routers[className]
+		if !ok {
+			err.Error(fmt.Errorf("router cfg not found: %s", className))
+			return
+		}
+		newRouter := prototype.New(routerCfg.Attributes, cfg).(MaybeRouter).Right()
+		routers[id] = newRouter
 		return
 	}
-	err.Error(fmt.Errorf("router prototype not found: %s", name))
+	err.Error(fmt.Errorf("router prototype not found: %s", className))
 	return
 }
 
-func GetRouter(name string) (ret MaybeRouter) {
-	if val, ok := routers[name]; ok {
+func GetRouter(id int32) (ret MaybeRouter) {
+	if val, ok := routers[id]; ok {
 		ret.Value(val)
 		return
 	}
-	ret.Error(fmt.Errorf("router not found: %s", name))
+	ret.Error(fmt.Errorf("router not found: %d", id))
 	return
 }
 
@@ -55,7 +60,7 @@ type MaybeRouter struct {
 	value Router
 }
 
-func (this MaybeRouter) New(cfg config.Config) config.IOC {
+func (this MaybeRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	panic("not implemented.")
 }
 

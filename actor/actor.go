@@ -22,33 +22,12 @@ func RegisterActorPrototype(name string, val Actor) (err maybe.MaybeError) {
 	return
 }
 
-func AddActors(cfg config.Config, name string, num int) (err maybe.MaybeError) {
-	if name == "" || num <= 0 {
-		err.Error(fmt.Errorf("illegal actor class name or num: %s, %d", name, num))
-		return
-	}
-	if _, ok := actors[name]; ok {
-		err.Error(fmt.Errorf("actors already exists: %s", name))
-		return
-	}
+func GetActorPrototype(name string) (ret MaybeActor) {
 	if prototype, ok := actorPrototype[name]; ok {
-		actors[name] = make([]Actor, 0, 0)
-		for i := 0; i < num; i++ {
-			newActor := prototype.New(cfg).(MaybeActor).Right()
-			actors[name] = append(actors[name], newActor)
-		}
+		ret.Value(prototype)
 		return
 	}
-	err.Error(fmt.Errorf("actor prototype not found: %s", name))
-	return
-}
-
-func GetActors(name string) (ret []Actor, err maybe.MaybeError) {
-	if array, ok := actors[name]; ok {
-		ret = array
-		return
-	}
-	err.Error(fmt.Errorf("actor not found: %s", name))
+	ret.Error(fmt.Errorf("actor prototype for class not found: %s", name))
 	return
 }
 
@@ -64,7 +43,7 @@ type MaybeActor struct {
 	value Actor
 }
 
-func (this MaybeActor) New(cfg config.Config) config.IOC {
+func (this MaybeActor) New(attrs interface{}, cfg config.Config) config.IOC {
 	panic("not implemented.")
 }
 
@@ -76,4 +55,8 @@ func (this MaybeActor) Value(value Actor) {
 func (this MaybeActor) Right() Actor {
 	this.Test()
 	return this.value
+}
+
+type commonActor struct{
+	Topo int32
 }

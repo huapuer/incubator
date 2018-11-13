@@ -1,7 +1,6 @@
 package host
 
 import (
-	"fmt"
 	"../common/maybe"
 	"../config"
 	"../message"
@@ -28,7 +27,7 @@ func (this *defaultLocalHost) Receive(msg message.Message) (err maybe.MaybeError
 	return
 }
 
-func (this defaultLocalHost) New(cfg interface{}) config.IOC {
+func (this defaultLocalHost) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeHost{}
 	//TODO: real logic
 	ret.Value(&defaultLocalHost{})
@@ -48,7 +47,7 @@ func (this *defaultRemoteHost) Receive(msg message.Message) (err maybe.MaybeErro
 	return
 }
 
-func (this defaultRemoteHost) New(cfg interface{}) config.IOC {
+func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeHost{}
 	//TODO: real logic
 	ret.Value(&defaultLocalHost{})
