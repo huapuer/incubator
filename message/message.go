@@ -27,7 +27,7 @@ func RegisterMessagePrototype(name string, val Message) (err maybe.MaybeError){
 	return
 }
 
-func RegisterMessageCanonical(cfg config.Config, typ int) (err maybe.MaybeError) {
+func RegisterMessageCanonical(layerOffset int32, typ int32, cfg config.Config) (err maybe.MaybeError) {
 	if typ <= 0 {
 		err.Error(fmt.Errorf("illegal message type: %d", typ))
 		return
@@ -42,19 +42,28 @@ func RegisterMessageCanonical(cfg config.Config, typ int) (err maybe.MaybeError)
 	}
 	if c, ok := cfg.Messages[typ]; ok {
 		if p, ok := messagePrototype[c.Class]; ok {
-			if rc, ok := cfg.Routers[c.RouterClass]; ok {
+			if rc, ok := cfg.Routers[c.RouterId]; ok {
 				p.SetType(typ)
-				messageCanonical[typ] = p
-				r := router.GetRouter(rc.Class).Right()
-				messageRouters[typ] = r
+				messageCanonical[layerOffset + typ] = p
+				r := router.GetRouter(layerOffset + rc.Id).Right()
+				messageRouters[layerOffset + typ] = r
 			}
-			err.Error(fmt.Errorf("router config for message type not found: %d, %d", typ, c.RouterClass))
+			err.Error(fmt.Errorf("router config for message type not found: %d, %d", typ, c.RouterId))
 			return
 		}
 		err.Error(fmt.Errorf("message prototype not found: %d", c.Class))
 		return
 	}
 	err.Error(fmt.Errorf("message config not found: %d", typ))
+	return
+}
+
+func GetMessageCanonical(typ int32) (ret MaybeMessage) {
+	if msg, ok:=messageCanonical[typ];ok{
+		ret.Value(msg)
+		return
+	}
+	ret.Error(fmt.Errorf("message canonical does not exists: %d", typ))
 	return
 }
 

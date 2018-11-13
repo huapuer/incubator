@@ -21,19 +21,19 @@ func RegisterRouterPrototype(name string, val Router) (err maybe.MaybeError) {
 	return
 }
 
-func AddRouter(id int32, className string, cfg config.Config) (err maybe.MaybeError) {
+func AddRouter(layerOffset int32, id int32, className string, cfg config.Config) (err maybe.MaybeError) {
 	if _, ok := routers[id]; ok {
-		err.Error(fmt.Errorf("router already exists: %s", className))
+		err.Error(fmt.Errorf("router already exists: %d", id))
 		return
 	}
 	if prototype, ok := routerPrototype[className]; ok {
-		routerCfg, ok := cfg.Routers[className]
+		routerCfg, ok := cfg.Routers[id]
 		if !ok {
 			err.Error(fmt.Errorf("router cfg not found: %s", className))
 			return
 		}
 		newRouter := prototype.New(routerCfg.Attributes, cfg).(MaybeRouter).Right()
-		routers[id] = newRouter
+		routers[layerOffset + id] = newRouter
 		return
 	}
 	err.Error(fmt.Errorf("router prototype not found: %s", className))

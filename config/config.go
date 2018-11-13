@@ -10,12 +10,8 @@ import (
 	"io/ioutil"
 )
 
-var(
-	topoIndex = 0
-)
-
 const(
-	spacePerTopo = 100
+	spacePerLayer = 100
 )
 
 type Actor struct {
@@ -31,20 +27,22 @@ type Router struct {
 }
 
 type Message struct {
-	Type        int    `json:"Type"`
+	Type        int32    `json:"Type"`
 	Class       string `json:"Class"`
-	RouterClass string `json:"Class"`
+	RouterId int32 `json:"RouterId"`
 }
 
 type Host struct {
+	Schema       int32       `json:"Schema"`
 	Class      string      `json:"Class"`
 	Attributes interface{} `json:"Attributes"`
 }
 
 type Config struct {
 	Topo struct {
-	     Class      string      `json:"Topology"`
-	     Attributes interface{} `json:"Attributes"`
+		Layer int32 `json:"Layer"`
+		Class      string      `json:"Topology"`
+		Attributes interface{} `json:"Attributes"`
 		//LocalHostClass  string `json:"LocalHost"`
 		//RemoteHostClass string `json:"LocalHost"`
 		//TotalHostNum    int64         `json:"TotalHostNum"`
@@ -54,11 +52,11 @@ type Config struct {
 	actors   []*Actor `json:"Actors"`
 	Actors   map[int32]*Actor
 	routers  []*Router `json:"Routers"`
-	Routers  map[string]*Router
+	Routers  map[int32]*Router
 	messages []*Message `json:"Messages"`
-	Messages map[int]*Message
+	Messages map[int32]*Message
 	hosts    []*Host `json:"Hosts"`
-	Hosts    map[string]*Host
+	Hosts    map[int32]*Host
 }
 
 func init() {
@@ -66,7 +64,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	cfg := Config{
+	cfg := &Config{
 		Actors:   make(map[int32]*Actor),
 		Routers:  make(map[string]*Router),
 		Messages: make(map[int]*Message),
@@ -79,41 +77,58 @@ func init() {
 	cfg.Process().Test()
 }
 
-func (this Config) Process() (err maybe.MaybeError) {
-	for i, a := range this.actors {
-		if a.Class == "" {
-			err.Error(fmt.Errorf("actor class name not set: index[%d]", i))
+func (this *Config) Process() (err maybe.MaybeError) {
+	if this.Topo.Layer <= 0 {
+		err.Error(fmt.Errorf("illegal topo layer: %d", this.Topo.Layer))
+	}
+
+	topo.CheckTopo(this.Topo.Layer).Test()
+
+	layerOffset := int32(this.Topo.Layer * spacePerLayer)
+
+	for _, a := range this.actors {
+		if a.Schema <= 0 {
+			err.Error(fmt.Errorf("illegal actor schema: %d", a.Schema))
+			return
 		}
 		this.Actors[a.Schema] = a
 	}
 
-	for i, r := range this.routers {
-		if r.Class == "" {
-			err.Error(fmt.Errorf("router class name not set: index[%d]", i))
+	for _, r := range this.routers {
+		if r.Id <= 0 {
+			err.Error(fmt.Errorf("illegal router id: %d", r.Id))
+			return
 		}
-		this.Routers[r.Class] = r
-		id := int32(topoIndex * spacePerTopo) + r.Id
-		router.AddRouter(id, r.Class, this).Test()
+		if _, ok := this.Routers[r.Id]; ok {
+			err.Error(fmt.Errorf("router already exists: %d", r.Id))
+			return
+		}
+		this.Routers[r.Id] = r
+		router.AddRouter(layerOffset, r.Id, r.Class, this).Test()
 	}
 
-	for i, m := range this.messages {
+	for _, m := range this.messages {
 		if m.Type <= 0 {
-			err.Error(fmt.Errorf("illegal message type: %d, index[%d]", m.Type, i))
+			err.Error(fmt.Errorf("illegal message type: %d", m.Type))
+			return
 		}
-		typ := topoIndex * spacePerTopo + m.Type
-		this.Messages[typ] = m
-		message.RegisterMessageCanonical(this, typ).Test()
+		if _, ok := this.Messages[m.Type]; ok {
+			err.Error(fmt.Errorf("message already exists: %d", m.Type))
+			return
+		}
+		this.Messages[m.Type] = m
+		message.RegisterMessageCanonical(layerOffset, m.Type, this).Test()
 	}
 
-	for i, h := range this.hosts {
-		if h.Class == "" {
-			err.Error(fmt.Errorf("host class name not set: index[%d]", i))
+	for _, h := range this.hosts {
+		if h.Schema <= 0 {
+			err.Error(fmt.Errorf("illegal host schema: %d", h.Schema))
+			return
 		}
-		this.Hosts[h.Class] = h
+		this.Hosts[h.Schema] = h
 	}
 
-	topo.SetTopo(int32(topoIndex), this)
-	topoIndex++
+	topo.SetTopo(layerOffset, this.Topo.Layer, this).Test()
 
 	return
 }

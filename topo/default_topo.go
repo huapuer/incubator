@@ -20,8 +20,8 @@ type defaultTopo struct {
 
 	totalHostNum    int64
 	localHostMod    int32
-	localHostClass  string
-	remoteHostClass string
+	localHostSchema  int32
+	remoteHostSchema int32
 	localHosts      []host.Host
 	remoteHosts     []host.Host
 }
@@ -73,37 +73,37 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	topo.localHostMod = localHostModInt
 
-	localHostClass, ok := attrsMap["LocalHostClass"]
+	localHostSchema, ok := attrsMap["LocalHostSchema"]
 	if !ok {
-		ret.Error(errors.New("attribute LocalHostClass not found"))
+		ret.Error(errors.New("attribute LocalHostSchema not found"))
 		return ret
 	}
-	localHostClassStr, ok := localHostClass.(string)
+	localHostSchemaInt, ok := localHostSchema.(int32)
 	if !ok {
-		ret.Error(fmt.Errorf("local host class cfg type error(expecting string): %+v", localHostClass))
+		ret.Error(fmt.Errorf("local host class cfg type error(expecting int32): %+v", localHostSchema))
 		return ret
 	}
-	if localHostClassStr == ""{
-		ret.Error(errors.New("empty LocalHostClass"))
+	if localHostSchemaInt <= 0 {
+		ret.Error(fmt.Errorf("illegal LocalHostSchema: %d", localHostSchemaInt))
 		return ret
 	}
-	topo.localHostClass = localHostClassStr
+	topo.localHostSchema = localHostSchemaInt
 
-	remoteHostClass, ok := attrsMap["RemoteHostClass"]
+	remoteHostSchema, ok := attrsMap["RemoteHostSchema"]
 	if !ok {
-		ret.Error(errors.New("attribute RemoteHostClass not found"))
+		ret.Error(errors.New("attribute RemoteHostSchema not found"))
 		return ret
 	}
-	remoteHostClassStr, ok := remoteHostClass.(string)
+	remoteHostClassInt, ok := remoteHostSchema.(int32)
 	if !ok {
-		ret.Error(fmt.Errorf("remote host class cfg type error(expecting string): %+v", remoteHostClass))
+		ret.Error(fmt.Errorf("remote host class cfg type error(expecting int): %+v", remoteHostSchema))
 		return ret
 	}
-	if remoteHostClassStr == ""{
-		ret.Error(errors.New("empty RemoteHostClass"))
+	if remoteHostClassInt <= 0 {
+		ret.Error(fmt.Errorf("illegal RemoteHostSchema: %d", remoteHostSchema))
 		return ret
 	}
-	topo.remoteHostClass = remoteHostClassStr
+	topo.remoteHostSchema = remoteHostClassInt
 
 	remoteEntries, ok := attrsMap["RemoteEntries"]
 	if !ok {
@@ -123,23 +123,23 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 
 	for i := 0; i < entryNum; i++ {
-		remoteHostCfg, ok := cfg.Actors[topo.remoteHostClass]
+		remoteHostCfg, ok := cfg.Hosts[topo.remoteHostSchema]
 		if !ok {
-			ret.Error(fmt.Errorf("no remote host cfg found: %s", topo.remoteHostClass))
+			ret.Error(fmt.Errorf("no remote host cfg found: %d", topo.remoteHostSchema))
 			return ret
 		}
 		topo.remoteHosts = append(
-			topo.remoteHosts, host.GetHostPrototype(topo.remoteHostClass).Right().(config.IOC).New(remoteHostCfg.Attributes, cfg).(host.MaybeHost).Right())
+			topo.remoteHosts, host.GetHostPrototype(remoteHostCfg.Class).Right().(config.IOC).New(remoteHostCfg.Attributes, cfg).(host.MaybeHost).Right())
 	}
 
 	for i:=0;int64(i)<topo.totalHostNum;i++ {
 		if int32(i%entryNum) == topo.localHostMod {
-			localHostCfg, ok := cfg.Actors[topo.localHostClass]
+			localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
 			if !ok {
-				ret.Error(fmt.Errorf("no local host cfg found: %s", topo.localHostClass))
+				ret.Error(fmt.Errorf("no local host cfg found: %d", topo.localHostSchema))
 				return ret
 			}
-			localHost := host.GetHostPrototype(topo.localHostClass).Right().New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
+			localHost := host.GetHostPrototype(localHostCfg.Class).Right().New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
 			localHost.SetId(int64(i))
 			topo.localHosts = append(topo.localHosts, localHost)
 		}

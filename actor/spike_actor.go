@@ -26,33 +26,34 @@ type spikeActor struct {
 	mutex   *sync.Mutex
 }
 
-func (this spikeActor) New(cfg config.Config) config.IOC {
+func (this spikeActor) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeActor{}
-	if actor, ok := cfg.Actors[spikeActorClassName]; ok {
-		attrs := actor.Attributes.(map[string]string)
-		if size, ok := attrs["MailBoxSize"]; ok {
-			if mailBoxSize, err := strconv.Atoi(size); err == nil {
-				return NewSpikeActor(int64(mailBoxSize))
-			}
-			ret.Error(fmt.Errorf("illegal actor attribute: %s=%s", "MailBoxSize", size))
-			return ret
-		}
+	if attrs == nil{
+		ret.Error(errors.New("actor attrs is nil"))
+		return ret
+	}
+	attrsMap, ok := attrs.(map[string]interface{})
+	if !ok{
+		ret.Error(fmt.Errorf("illegal cfg type when new actor %s", spikeActorClassName))
+		return ret
+	}
+	size, ok := attrsMap["MailBoxSize"]
+	if !ok{
 		ret.Error(fmt.Errorf("no actor attribute found: %s", "MailBoxSize"))
 		return ret
 	}
-	ret.Error(fmt.Errorf("no actor class cfg found: %s", spikeActorClassName))
-	return ret
-}
-
-func NewSpikeActor(taskChanSize int64) (this MaybeActor) {
-	if taskChanSize <= 0 {
-		this.Error(fmt.Errorf("wrong task chan size: %d", taskChanSize))
-		return
+	sizeInt, ok := size.(int)
+	if !ok {
+		ret.Error(fmt.Errorf("actor mailbox size cfg type error(expecting int): %+v", size))
+		return ret
 	}
-	this.Value(&spikeActor{
-		mailbox: make(chan message.Message, taskChanSize),
-		mutex:   &sync.Mutex{}})
-	return
+	if sizeInt <= 0 {
+		ret.Error(fmt.Errorf("illegal actor mailbox size: %d", sizeInt))
+		return ret
+	}
+	ret.Value(&defaultActor{mailbox: make(chan message.Message, sizeInt)})
+
+	return ret
 }
 
 func (this *spikeActor) Start(ctx context.Context) (err maybe.MaybeError) {

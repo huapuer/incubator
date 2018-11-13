@@ -6,7 +6,7 @@ import (
 	"../common/maybe"
 	"../config"
 	"../host"
-	"incubator/message"
+	"../message"
 )
 
 var (
@@ -23,26 +23,40 @@ func RegisterTopoPrototype(name string, val Topo) (err maybe.MaybeError) {
 	return
 }
 
-func SetTopo(index int32, cfg config.Config) (err maybe.MaybeError) {
-	if _, ok :=topos[index]; ok{
+func CheckTopo(layer int32)(err maybe.MaybeError) {
+	if _, ok :=topos[layer]; ok{
 		err.Error(errors.New("global topo has been set"))
+		return
+	}
+	return
+}
+
+func SetTopo(layerOffset int32, layer int32, cfg config.Config) (err maybe.MaybeError) {
+	if _, ok :=topos[layer]; ok{
+		err.Error(fmt.Errorf("topo has been set: %d", layer))
 		return
 	}
 	if prototype, ok := topoPrototype[cfg.Topo.Class]; ok {
 		topo := prototype.New(cfg.Topo.Attributes, cfg).(MaybeTopo).Right()
-		topos[index] = topo
+
+		for typ, msgCfg := range cfg.Messages {
+			msg := message.GetMessageCanonical(layerOffset + typ).Right()
+			topo.RegisterMessageCanonical(msgCfg.Class, msg).Test()
+		}
+
+		topos[layer] = topo
 		return
 	}
 	err.Error(fmt.Errorf("topo prototype not found: %s", cfg.Topo.Class))
 	return
 }
 
-func GetTopo(index int32) (ret MaybeTopo) {
-	if topo, ok := topos[index];ok {
+func GetTopo(layer int32) (ret MaybeTopo) {
+	if topo, ok := topos[layer];ok {
 		ret.Value(topo)
 		return
 	}
-	ret.Error(fmt.Errorf("global topo not found: %d", index))
+	ret.Error(fmt.Errorf("global topo not found: %d", layer))
 	return
 }
 
@@ -50,6 +64,7 @@ type Topo interface {
 	config.IOC
 
 	Lookup(int64) host.MaybeHost
+	RegisterMessageCanonical(string, message.Message) maybe.MaybeError
 }
 
 type MaybeTopo struct {
@@ -77,11 +92,19 @@ type commonTopo struct{
 	messageCanonical map[string]message.Message
 }
 
-func (this * commonTopo) RegisterMessageCanonical(name string, val message.Message) (err maybe.MaybeError){
-	if _, ok := messagePrototype[name]; ok {
-		err.Error(fmt.Errorf("message prototype redefined: %s", name))
+func (this *commonTopo) RegisterMessageCanonical(className string, msg message.Message) (err maybe.MaybeError){
+	if className == "" {
+		err.Error(error.Error("empty class name"))
 		return
 	}
-	messagePrototype[name] = val
+	if msg == nil {
+		err.Error(error.Error("message is nil"))
+		return
+	}
+	if _, ok := this.messageCanonical[className]; ok{
+		err.Error(fmt.Errorf("message canonical already exists: %s", className))
+		return
+	}
+	this.messageCanonical[className] = msg
 	return
 }

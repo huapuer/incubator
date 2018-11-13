@@ -23,6 +23,10 @@ type pullUpMessage struct {
 }
 
 func (this *pullUpMessage) Process(ctx context.Context) (err maybe.MaybeError) {
+	if this.cfg == nil {
+		err.Error(errors.New("cfg is nil"))
+		return
+	}
 	this.cfg.Process().Test()
 	return
 }
