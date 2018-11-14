@@ -64,11 +64,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	cfg := &Config{
-		Actors:   make(map[int32]*Actor),
-		Routers:  make(map[string]*Router),
-		Messages: make(map[int]*Message),
-	}
+	cfg := &Config{}
 	err = json.Unmarshal(configFile, &cfg)
 	if err != nil {
 		panic(err)
@@ -86,6 +82,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	layerOffset := int32(this.Topo.Layer * spacePerLayer)
 
+	this.Actors = make(map[int32]*Actor)
 	for _, a := range this.actors {
 		if a.Schema <= 0 {
 			err.Error(fmt.Errorf("illegal actor schema: %d", a.Schema))
@@ -94,6 +91,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 		this.Actors[a.Schema] = a
 	}
 
+	this.Routers = make(map[int32]*Router)
 	for _, r := range this.routers {
 		if r.Id <= 0 {
 			err.Error(fmt.Errorf("illegal router id: %d", r.Id))
@@ -107,6 +105,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 		router.AddRouter(layerOffset, r.Id, r.Class, this).Test()
 	}
 
+	this.Messages = make(map[int32]*Message)
 	for _, m := range this.messages {
 		if m.Type <= 0 {
 			err.Error(fmt.Errorf("illegal message type: %d", m.Type))
@@ -120,6 +119,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 		message.RegisterMessageCanonical(layerOffset, m.Type, this).Test()
 	}
 
+	this.Hosts = make(map[int32]*Host)
 	for _, h := range this.hosts {
 		if h.Schema <= 0 {
 			err.Error(fmt.Errorf("illegal host schema: %d", h.Schema))
