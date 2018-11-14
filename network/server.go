@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"../common/class"
 	"../common/maybe"
 	"math/rand"
 	"net"
@@ -13,21 +12,19 @@ import (
 )
 
 type Server interface {
-	Start(context.Context, string, string) maybe.MaybeError
-	handleConnection(context.Context, net.Conn)
-	handleData([]byte, int) maybe.MaybeError
-	handlePackage([]byte) maybe.MaybeError
+	Start(Server, context.Context, string, string) maybe.MaybeError
+	handleConnection(Server, context.Context, net.Conn)
+	handleData(Server, []byte, int) maybe.MaybeError
+	handlePackage(Server, []byte) maybe.MaybeError
 }
 
 type commonServer struct {
-	class.DefaultClass
-
 	readBufferSize int
 	packageBuffer  []byte
 	packageSize    int
 }
 
-func (this commonServer) Start(ctx context.Context, network string, port string) (err maybe.MaybeError) {
+func (this commonServer) Start(server Server, ctx context.Context, network string, port string) (err maybe.MaybeError) {
 	if network == "" {
 		err.Error(errors.New("not network provided"))
 	}
@@ -53,13 +50,13 @@ func (this commonServer) Start(ctx context.Context, network string, port string)
 				return
 			}
 			maybe.TryCatch(func() {
-				go this.GetDerived().(Server).handleConnection(ctx, c)
+				go server.handleConnection(server, ctx, c)
 			}, nil)
 		}
 	}
 }
 
-func (this commonServer) handleConnection(ctx context.Context, c net.Conn) {
+func (this commonServer) handleConnection(server Server, ctx context.Context, c net.Conn) {
 	defer c.Close()
 	reader := bufio.NewReader(c)
 	buffer := make([]byte, this.readBufferSize)
@@ -71,13 +68,13 @@ func (this commonServer) handleConnection(ctx context.Context, c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
-			this.GetDerived().(Server).handleData(buffer, len).Test()
+			server.handleData(server, buffer, len).Test()
 		}
 	}
 	return
 }
 
-func (this commonServer) handleData(data []byte, l int) (err maybe.MaybeError) {
+func (this commonServer) handleData(server Server, data []byte, l int) (err maybe.MaybeError) {
 	if l == 0 {
 		err.Error(errors.New("empty data"))
 		return
@@ -94,7 +91,7 @@ func (this commonServer) handleData(data []byte, l int) (err maybe.MaybeError) {
 				this.packageBuffer = data[want:]
 			}
 			this.packageSize = 0
-			this.GetDerived().(Server).handlePackage(pkg).Test()
+			server.handlePackage(server, pkg).Test()
 		} else {
 			this.packageBuffer = append(this.packageBuffer, data...)
 		}
@@ -103,7 +100,7 @@ func (this commonServer) handleData(data []byte, l int) (err maybe.MaybeError) {
 	return
 }
 
-func (this commonServer) handlePacakge(data []byte) (err maybe.MaybeError) {
-	err.Error(errors.New("calling abstract method:commonServer.handlePackage"))
+func (this commonServer) handlePacakge(server Server, data []byte) (err maybe.MaybeError) {
+	server.handlePackage(server, data)
 	return
 }
