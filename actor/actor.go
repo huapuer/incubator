@@ -10,7 +10,6 @@ import (
 
 var (
 	actorPrototype = make(map[string]Actor)
-	actors         = make(map[string][]Actor)
 )
 
 func RegisterActorPrototype(name string, val Actor) (err maybe.MaybeError) {

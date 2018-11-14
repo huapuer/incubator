@@ -11,11 +11,12 @@ type defaultServer struct {
 }
 
 func (this defaultServer) handlePacakge(data []byte) (err maybe.MaybeError) {
-	if len(data) <= 1 {
+	if len(data) <= 2 {
 		err.Error(errors.New("empty package"))
 		return
 	}
-	typ := data[0]
-	message.RoutePackage(data, int(typ)).Test()
+	layer := data[0]
+	typ := data[1]
+	message.RoutePackage(data, uint8(layer), uint8(typ)).Test()
 	return
 }

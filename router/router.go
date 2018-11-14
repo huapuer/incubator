@@ -9,7 +9,6 @@ import (
 
 var (
 	routerPrototype = make(map[string]Router)
-	routers         = make(map[int32]Router)
 )
 
 func RegisterRouterPrototype(name string, val Router) (err maybe.MaybeError) {
@@ -21,31 +20,12 @@ func RegisterRouterPrototype(name string, val Router) (err maybe.MaybeError) {
 	return
 }
 
-func AddRouter(layerOffset int32, id int32, className string, cfg config.Config) (err maybe.MaybeError) {
-	if _, ok := routers[id]; ok {
-		err.Error(fmt.Errorf("router already exists: %d", id))
+func GetRouterPrototype(name string) (ret MaybeRouter){
+	if routerPrototype, ok := routerPrototype[name]; ok{
+		ret.Value(routerPrototype)
 		return
 	}
-	if prototype, ok := routerPrototype[className]; ok {
-		routerCfg, ok := cfg.Routers[id]
-		if !ok {
-			err.Error(fmt.Errorf("router cfg not found: %s", className))
-			return
-		}
-		newRouter := prototype.New(routerCfg.Attributes, cfg).(MaybeRouter).Right()
-		routers[layerOffset + id] = newRouter
-		return
-	}
-	err.Error(fmt.Errorf("router prototype not found: %s", className))
-	return
-}
-
-func GetRouter(id int32) (ret MaybeRouter) {
-	if val, ok := routers[id]; ok {
-		ret.Value(val)
-		return
-	}
-	ret.Error(fmt.Errorf("router not found: %d", id))
+	ret.Error(fmt.Errorf("router prototype not found: %s", name))
 	return
 }
 

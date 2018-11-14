@@ -31,8 +31,13 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 }
 
 func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
+	this.Init(cfg)
+
 	ret := MaybeTopo{}
 	topo := &defaultTopo{
+		commonTopo{
+			layer: cfg.Topo.Layer,
+		},
 		localHosts: make([]host.Host, 0, 0),
 		remoteHosts: make([]host.Host, 0, 0),
 	}

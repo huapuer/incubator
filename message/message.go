@@ -10,12 +10,11 @@ import (
 	"../router"
 	"unsafe"
 	"../topo"
+	"strings"
 )
 
 var (
 	messagePrototype = make(map[string]Message)
-	messageCanonical = make(map[int]Message)
-	messageRouters   = make(map[int]router.Router)
 )
 
 func RegisterMessagePrototype(name string, val Message) (err maybe.MaybeError){
@@ -27,66 +26,28 @@ func RegisterMessagePrototype(name string, val Message) (err maybe.MaybeError){
 	return
 }
 
-func RegisterMessageCanonical(layerOffset int32, typ int32, cfg config.Config) (err maybe.MaybeError) {
-	if typ <= 0 {
-		err.Error(fmt.Errorf("illegal message type: %d", typ))
-		return
-	}
-	if _, ok := messageCanonical[typ]; ok {
-		err.Error(fmt.Errorf("message canonical type already exists: %d", typ))
-		return
-	}
-	if _, ok := messageRouters[typ]; ok {
-		err.Error(fmt.Errorf("router for message type already exists: %d", typ))
-		return
-	}
-	if c, ok := cfg.Messages[typ]; ok {
-		if p, ok := messagePrototype[c.Class]; ok {
-			if rc, ok := cfg.Routers[c.RouterId]; ok {
-				p.SetType(typ)
-				messageCanonical[layerOffset + typ] = p
-				r := router.GetRouter(layerOffset + rc.Id).Right()
-				messageRouters[layerOffset + typ] = r
-			}
-			err.Error(fmt.Errorf("router config for message type not found: %d, %d", typ, c.RouterId))
-			return
-		}
-		err.Error(fmt.Errorf("message prototype not found: %d", c.Class))
-		return
-	}
-	err.Error(fmt.Errorf("message config not found: %d", typ))
-	return
-}
-
-func GetMessageCanonical(typ int32) (ret MaybeMessage) {
-	if msg, ok:=messageCanonical[typ];ok{
+func GetMessagePrototype(name string) (ret MaybeMessage) {
+	if msg, ok := messagePrototype[name]; ok{
 		ret.Value(msg)
 		return
 	}
-	ret.Error(fmt.Errorf("message canonical does not exists: %d", typ))
+	ret.Error(fmt.Errorf("message prototype not found: %s", name))
 	return
 }
 
-func RoutePackage(data []byte, typ int) (err maybe.MaybeError) {
-	if m, ok := messageCanonical[typ]; ok {
-		msg := m.Unmarshal(data).Right()
-		msgType := msg.GetType().Right()
-		if msgType != typ {
-			err.Error(fmt.Errorf("message type unmatched with package: pkg:%d, msg:%d", typ, msgType))
-			return
-		}
-		err = Route(msg)
-		return
-	}
-	err.Error(fmt.Errorf("message canonical for type not found: %d", typ))
+func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
+	tp := topo.GetTopo(layer).Right()
+	msgCanon := tp.GetMessageCanonicalFromType(typ).Right()
+	msg := msgCanon.Unmarshal(data, msgCanon).Right()
+	router := tp.GetRouter(typ).Right()
+	router.Route(msg).Test()
 	return
 }
 
 func Route(m Message) (err maybe.MaybeError) {
-	if r, ok := messageRouters[m.GetType().Right()]; ok {
-		r.Route(m)
-	}
-	err.Error(fmt.Errorf("router for message type not found: %d", m.GetType().Right()))
+	tp:=topo.GetTopo(m.GetType()).Right()
+	router := tp.GetRouter(m.GetType()).Right()
+	router.Route(m).Test()
 	return
 }
 
@@ -99,16 +60,18 @@ func SendTo(m Message, topoId int32, hostId int64) (err maybe.MaybeError) {
 }
 
 type Message interface {
-	SetType(int) maybe.MaybeError
-	GetType() maybe.MaybeInt
-	GetSize() int
+	SetLayer(uint8) maybe.MaybeError
+	GetLayer() uint8
+	SetType(uint8) maybe.MaybeError
+	GetType() uint8
+	GetSize() int32
 	Process(context.Context) maybe.MaybeError
 	GetHostId() maybe.MaybeInt64
 	SetHostId(int64) maybe.MaybeError
-	Marshal() []byte
+	Marshal(Message) []byte
 	GetJsonBytes() maybe.MaybeBytes
 	SetJsonField([]byte) maybe.MaybeError
-	Unmarshal([]byte) MaybeMessage
+	Unmarshal([]byte, Message) MaybeMessage
 }
 
 type MaybeMessage struct {
@@ -128,10 +91,8 @@ func (this MaybeMessage) Right() Message {
 }
 
 type commonMessage struct {
-	class.DefaultClass
-
-	typ    int
-	size   int
+	layer  uint8
+	typ    uint8
 	hostId int64
 }
 
@@ -140,17 +101,25 @@ func (this *commonMessage) Process(ctx context.Context) (err maybe.MaybeError) {
 	return
 }
 
-func (this *commonMessage) GetType() (ret maybe.MaybeInt) {
-	if this.typ <= 0 {
-		ret.Error(fmt.Errorf("illegal message type: %d", this.typ))
+func (this *commonMessage) GetLayer() int32 {
+	return this.layer
+}
+
+func (this *commonMessage) SetLayer(layer uint8) (err maybe.MaybeError) {
+	if layer < 0 {
+		err.Error(fmt.Errorf("illegal message layer: %d", layer))
 		return
 	}
-	ret.Value(this.typ)
+	this.layer = layer
 	return
 }
 
-func (this *commonMessage) SetType(typ int) (err maybe.MaybeError) {
-	if typ <= 0 {
+func (this *commonMessage) GetType() int32 {
+	return this.typ
+}
+
+func (this *commonMessage) SetType(typ uint8) (err maybe.MaybeError) {
+	if typ < 0 {
 		err.Error(fmt.Errorf("illegal message type: %d", typ))
 		return
 	}
@@ -187,30 +156,27 @@ type mimicIFace struct {
 	data unsafe.Pointer
 }
 
-func (this *commonMessage) Marshal() (ret []byte) {
-	derived := this.GetDerived()
-	mi := (*mimicIFace)(unsafe.Pointer(&derived))
+func (this *commonMessage) Marshal(msg Message) (ret []byte) {
+	mi := (*mimicIFace)(unsafe.Pointer(&msg))
 
-	msg := this.GetDerived().(Message)
 	size := msg.GetSize()
 	ms := &mimicSlice{mi.data, size, size}
 	val := *(*[]byte)(unsafe.Pointer(ms))
 
-	typ := msg.GetType().Right()
 	jbytes := msg.GetJsonBytes().Right()
-	jlth := len(jbytes)
-	lth := len(val) + jlth + 2
 
-	ret = append(ret, uint8(lth), uint8(len(val)), uint8(typ))
+	lth := int32(len(val) + len(jbytes) + 1 + unsafe.Sizeof(int32(0)))
+
+	ret = append(ret, uint8(lth), uint8(len(val)))
 	ret = append(ret, val...)
-	if jlth > 0 {
+	if len(jbytes) > 0 {
 		ret = append(ret, jbytes...)
 	}
 
 	return
 }
 
-func (this *commonMessage) Unmarshal(data []byte) (msg MaybeMessage) {
+func (this *commonMessage) Unmarshal(data []byte, canon Message) (msg MaybeMessage) {
 	l := len(data)
 	if l < 4 {
 		msg.Error(fmt.Errorf("message bytes too short: %d", l))
@@ -240,9 +206,7 @@ func (this *commonMessage) Unmarshal(data []byte) (msg MaybeMessage) {
 
 	ms := (*mimicSlice)(unsafe.Pointer(&val))
 
-	derived := this.GetDerived().(Message)
-
-	mt := (*mimicIFace)(unsafe.Pointer(&derived))
+	mt := (*mimicIFace)(unsafe.Pointer(&canon))
 	mi := (*mimicIFace)(unsafe.Pointer(&msg.value))
 	mi.data = ms.addr
 	mi.tab = mt.tab
@@ -250,7 +214,7 @@ func (this *commonMessage) Unmarshal(data []byte) (msg MaybeMessage) {
 	ljsn := lth - lval - 2
 	if ljsn > 0 {
 		jsn := data[lval+2 : lth]
-		derived.SetJsonField(jsn).Test()
+		canon.SetJsonField(jsn).Test()
 	}
 
 	return

@@ -19,6 +19,7 @@ func init(){
 
 type pullUpMessage struct {
 	commonMessage
+
 	cfg *config.Config
 }
 
@@ -49,11 +50,6 @@ func (this *pullUpMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
 	return
 }
 
-func (this *pullUpMessage) GetSize() int {
-	return int(unsafe.Sizeof(*this))
-}
-
-func (this *pullUpMessage) Unmarshal(data []byte) (msg MaybeMessage) {
-	msg.Error(errors.New("calling abstract method:commonMessage.Unmarshal()"))
-	return
+func (this *pullUpMessage) GetSize() int32 {
+	return int32(unsafe.Sizeof(*this))
 }

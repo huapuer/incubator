@@ -21,6 +21,6 @@ func (this *defaultClient) Start(addr string) (err maybe.MaybeError) {
 }
 
 func (this *defaultClient) Send(msg message.Message) (err maybe.MaybeError) {
-	this.conn.Write(msg.Marshal())
+	this.conn.Write(msg.Marshal(msg))
 	return
 }
