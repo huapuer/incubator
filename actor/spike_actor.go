@@ -2,6 +2,7 @@ package actor
 
 import (
 	"context"
+	c "../context"
 	"errors"
 	"../common/maybe"
 	"../config"
@@ -67,7 +68,10 @@ func (this *spikeActor) Receive(msg message.Message) (err maybe.MaybeError) {
 				case m := <-this.mailbox:
 					maybe.TryCatch(
 						func() {
-							m.Process(this.ctx).Test()
+							ctx := c.MessageContext{
+								Runner: this,
+							}
+							m.Process(ctx).Test()
 						}, nil)
 					processed = true
 				}

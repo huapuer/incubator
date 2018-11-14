@@ -1,9 +1,12 @@
 package context
 
-import "context"
+import (
+	"context"
+	"github.com/incubator/actor"
+)
 
 type MessageContext struct{
 	context.Context
 
-	Topo int32
+	Runner actor.Actor
 }

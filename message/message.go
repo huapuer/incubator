@@ -52,7 +52,7 @@ func Route(m Message) (err maybe.MaybeError) {
 }
 
 func SendTo(m Message, topoId int32, hostId int64) (err maybe.MaybeError) {
-	if hostId < 0 {
+	if hostId <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", hostId))
 	}
 	topo.GetTopo(topoId).Right().Lookup(hostId).Right().Receive(m).Test()
@@ -72,6 +72,7 @@ type Message interface {
 	GetJsonBytes() maybe.MaybeBytes
 	SetJsonField([]byte) maybe.MaybeError
 	Unmarshal([]byte, Message) MaybeMessage
+	Duplicate() MaybeMessage
 }
 
 type MaybeMessage struct {
@@ -106,7 +107,7 @@ func (this *commonMessage) GetLayer() int32 {
 }
 
 func (this *commonMessage) SetLayer(layer uint8) (err maybe.MaybeError) {
-	if layer < 0 {
+	if layer <= 0 {
 		err.Error(fmt.Errorf("illegal message layer: %d", layer))
 		return
 	}
@@ -119,7 +120,7 @@ func (this *commonMessage) GetType() int32 {
 }
 
 func (this *commonMessage) SetType(typ uint8) (err maybe.MaybeError) {
-	if typ < 0 {
+	if typ <= 0 {
 		err.Error(fmt.Errorf("illegal message type: %d", typ))
 		return
 	}
@@ -136,12 +137,12 @@ func (this *commonMessage) GetHostId() (ret maybe.MaybeInt64) {
 	return
 }
 
-func (this *commonMessage) SetHostId(seed int64) (err maybe.MaybeError) {
-	if seed < 0 {
-		err.Error(fmt.Errorf("illegal seed: %d", seed))
+func (this *commonMessage) SetHostId(hostId int64) (err maybe.MaybeError) {
+	if hostId < 0 {
+		err.Error(fmt.Errorf("illegal seed: %d", hostId))
 		return
 	}
-	this.hostId = seed
+	this.hostId = hostId
 	return
 }
 
@@ -218,4 +219,9 @@ func (this *commonMessage) Unmarshal(data []byte, canon Message) (msg MaybeMessa
 	}
 
 	return
+}
+
+func (this commonMessage) copyPaste (msg Message) {
+	msg.SetType(this.typ)
+	msg.SetLayer(this.layer)
 }

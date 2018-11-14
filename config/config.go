@@ -74,13 +74,13 @@ func init() {
 }
 
 func (this *Config) Process() (err maybe.MaybeError) {
-	if this.Topo.Layer < 0 {
+	if this.Topo.Layer <= 0 {
 		err.Error(fmt.Errorf("illegal topo layer: %d", this.Topo.Layer))
 	}
 
 	this.Actors = make(map[int32]*Actor)
 	for _, a := range this.actors {
-		if a.Schema < 0 {
+		if a.Schema <= 0 {
 			err.Error(fmt.Errorf("illegal actor schema: %d", a.Schema))
 			return
 		}
@@ -89,7 +89,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	this.Routers = make(map[int32]*Router)
 	for _, r := range this.routers {
-		if r.Id < 0 {
+		if r.Id <= 0 {
 			err.Error(fmt.Errorf("illegal router id: %d", r.Id))
 			return
 		}
@@ -102,7 +102,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	this.Messages = make(map[int32]*Message)
 	for _, m := range this.messages {
-		if m.Type < 0 {
+		if m.Type <= 0 {
 			err.Error(fmt.Errorf("illegal message type: %d", m.Type))
 			return
 		}
@@ -115,7 +115,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	this.Hosts = make(map[int32]*Host)
 	for _, h := range this.hosts {
-		if h.Schema < 0 {
+		if h.Schema <= 0 {
 			err.Error(fmt.Errorf("illegal host schema: %d", h.Schema))
 			return
 		}

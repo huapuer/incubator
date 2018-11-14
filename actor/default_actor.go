@@ -48,7 +48,7 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 				maybe.TryCatch(
 					func() {
 						ctx := c.MessageContext{
-							Topo: this.Topo,
+							Runner: this,
 						}
 						m.Process(ctx).Test()
 					}, nil)

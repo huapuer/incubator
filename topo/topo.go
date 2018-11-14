@@ -117,10 +117,13 @@ func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError){
 		}
 
 		msgPrototype := message.GetMessagePrototype(msgCfg.Class).Right()
+		msgCanon := msgPrototype.Duplicate().Right()
+		msgCanon.SetLayer(this.layer)
+		msgCanon.SetType(msgCfg.Type)
 
 		// TODO: deep copy
-		this.messageCanonicalFromType[msgCfg.Type] = msgPrototype
-		this.messageCanonicalFromClass[msgCfg.Class] = msgPrototype
+		this.messageCanonicalFromType[msgCfg.Type] = msgCanon
+		this.messageCanonicalFromClass[msgCfg.Class] = msgCanon
 
 		this.messageRouters[msgCfg.Type], _ = this.routers[msgCfg.RouterId]
 	}
@@ -136,10 +139,9 @@ func (this commonTopo) GetRouter(id int32) (ret router.MaybeRouter) {
 	return
 }
 
-func (this commonTopo) GetMessageCanonicalFromClass(name string) (ret message.MaybeMessage) {
+func (this commonTopo) GetMessageFromClass(name string) (ret message.MaybeMessage) {
 	if val, ok := this.messageCanonicalFromClass[name]; ok {
-		// TODO: deep copy
-		ret.Value(val)
+		ret.Value(val.Duplicate().Right())
 		return
 	}
 	ret.Error(fmt.Errorf("message canonical from class not found: %s", name))
@@ -148,7 +150,6 @@ func (this commonTopo) GetMessageCanonicalFromClass(name string) (ret message.Ma
 
 func (this commonTopo) GetMessageCanonicalFromType(typ int32) (ret message.MaybeMessage) {
 	if val, ok := this.messageCanonicalFromType[typ]; ok {
-		// TODO: deep copy
 		ret.Value(val)
 		return
 	}
