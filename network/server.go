@@ -14,8 +14,8 @@ import (
 type Server interface {
 	Start(Server, context.Context, string, string) maybe.MaybeError
 	handleConnection(Server, context.Context, net.Conn)
-	handleData(Server, []byte, int) maybe.MaybeError
-	handlePackage(Server, []byte) maybe.MaybeError
+	handleData([]byte, int) maybe.MaybeError
+	handlePackage([]byte) maybe.MaybeError
 }
 
 type commonServer struct {
@@ -68,39 +68,14 @@ func (this commonServer) handleConnection(server Server, ctx context.Context, c 
 			if err != nil {
 				panic(err)
 			}
-			server.handleData(server, buffer, len).Test()
+			server.handleData(buffer, len).Test()
 		}
 	}
 	return
 }
 
-func (this commonServer) handleData(server Server, data []byte, l int) (err maybe.MaybeError) {
-	if l == 0 {
-		err.Error(errors.New("empty data"))
-		return
-	}
-	if this.packageSize == 0 {
-		this.packageSize = int(data[0])
-		this.packageBuffer = data[1:]
-	} else {
-		want := len(this.packageBuffer) + l - this.packageSize
-		if want >= 0 {
-			pkg := this.packageBuffer
-			pkg = append(pkg, data[:want]...)
-			if want > 0 {
-				this.packageBuffer = data[want:]
-			}
-			this.packageSize = 0
-			server.handlePackage(server, pkg).Test()
-		} else {
-			this.packageBuffer = append(this.packageBuffer, data...)
-		}
-	}
-
-	return
-}
 
 func (this commonServer) handlePacakge(server Server, data []byte) (err maybe.MaybeError) {
-	server.handlePackage(server, data)
+	server.handlePackage(data)
 	return
 }
