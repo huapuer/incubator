@@ -33,7 +33,7 @@ func (this *pullUpMessage) Process(ctx context.Context) (err maybe.MaybeError) {
 }
 
 func (this *pullUpMessage) GetJsonBytes() (ret maybe.MaybeBytes) {
-	bytes, err := json.Marshal(this)
+	bytes, err := json.Marshal(this.cfg)
 	if err != nil {
 		ret.Error(err)
 	} else {

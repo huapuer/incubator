@@ -64,6 +64,8 @@ type Message interface {
 	GetLayer() uint8
 	SetType(uint8) maybe.MaybeError
 	GetType() uint8
+	Master(bool)
+	IsMaster() bool
 	GetSize() int32
 	Process(context.Context) maybe.MaybeError
 	GetHostId() maybe.MaybeInt64
@@ -94,6 +96,7 @@ func (this MaybeMessage) Right() Message {
 type commonMessage struct {
 	layer  uint8
 	typ    uint8
+	master bool
 	hostId int64
 }
 
@@ -125,6 +128,15 @@ func (this *commonMessage) SetType(typ uint8) (err maybe.MaybeError) {
 		return
 	}
 	this.typ = typ
+	return
+}
+
+func (this *commonMessage) IsMater() bool {
+	return this.master
+}
+
+func (this *commonMessage) Master(b bool) {
+	this.master = b
 	return
 }
 

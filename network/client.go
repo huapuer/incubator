@@ -3,9 +3,11 @@ package network
 import (
 	"../common/maybe"
 	"../message"
+	"github.com/incubator/config"
 )
 
 type Client interface {
-	Start(string) maybe.MaybeError
+	config.IOC
+
 	Send(message message.Message) maybe.MaybeError
 }

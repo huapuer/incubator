@@ -20,13 +20,65 @@ type defaultTopo struct {
 
 	totalHostNum    int64
 	localHostMod    int32
+	backupFactor    int32
 	localHostSchema  int32
 	remoteHostSchema int32
 	localHosts      []host.Host
 	remoteHosts     []host.Host
+	remoteNum       int32
 }
 
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
+	mod := id%(this.remoteNum + 1)
+	idx := id/(this.remoteNum + 1)/(this.backupFactor + 1)+mod
+	hosts := make([]host.Host, 0, 0)
+
+	if mod == this.localHostMod {
+		if idx > len(this.localHosts) {
+			ret.Error(fmt.Errorf("master id exceeds local host range: %d", id))
+			return
+		}
+		hosts = append(hosts, this.localHosts[idx])
+	}else{
+		ridx := mod
+		if mod > this.localHostMod {
+			ridx--
+		}
+		hosts = append(hosts, this.remoteHosts[ridx])
+	}
+	if mod < this.localHostMod + this.backupFactor {
+		if idx > len(this.localHosts) {
+			ret.Error(fmt.Errorf("slave id exceeds local host range: %d", id))
+			return
+		}
+		hosts = append(hosts, this.localHosts[idx])
+	}
+	for offset:=0;offset < this.backupFactor - 1;offset++{
+		ridx := (mod + offset)% (this.remoteNum + 1)
+		if mod > this.localHostMod {
+			ridx--
+		}
+		hosts = append(hosts, this.remoteHosts[ridx])
+	}
+
+	var master host.Host
+	slaves := make([]host.Host, 0, 0)
+	for _, h := range hosts {
+		if h.IsValid(){
+			if master == nil {
+				master = h
+			} else {
+				slaves = append(slaves, h)
+			}
+		}
+	}
+
+	if master == nil {
+		ret.Error(fmt.Errorf("no available master host found for id: %d", id))
+		return
+	}
+
+	ret.Value(host.NewDuplicatedHost(master, slaves).Right())
 	return
 }
 
@@ -78,6 +130,23 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	topo.localHostMod = localHostModInt
 
+	backupFactor, ok := attrsMap["BackupFactor"]
+	if !ok {
+		ret.Error(errors.New("attribute BackupFactor not found"))
+		return ret
+	}
+	backupFactoInt, ok := backupFactor.(int32)
+	if !ok {
+		ret.Error(fmt.Errorf("backup factor cfg type error(expecting int): %+v", backupFactor))
+		return ret
+	}
+	if backupFactoInt < 0 {
+		ret.Error(fmt.Errorf("illegal backup factor : %d", localHostModInt))
+		return ret
+	}
+	topo.backupFactor = backupFactor
+
+
 	localHostSchema, ok := attrsMap["LocalHostSchema"]
 	if !ok {
 		ret.Error(errors.New("attribute LocalHostSchema not found"))
@@ -120,14 +189,14 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("attribute RemoteEntries has illegal type(expecting []map[string]string: %+v", remoteEntries))
 		return ret
 	}
-	entryNum := len(remoteEntriesMap)
+	topo.remoteNum = len(remoteEntriesMap)
 
-	if topo.localHostMod != int32(entryNum) {
-		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localHostMod, entryNum))
+	if topo.localHostMod != topo.remoteNum {
+		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localHostMod, topo.remoteNum))
 		return ret
 	}
 
-	for i := 0; i < entryNum; i++ {
+	for i := 0; i < topo.remoteNum; i++ {
 		remoteHostCfg, ok := cfg.Hosts[topo.remoteHostSchema]
 		if !ok {
 			ret.Error(fmt.Errorf("no remote host cfg found: %d", topo.remoteHostSchema))
@@ -138,7 +207,8 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 
 	for i:=0;int64(i)<topo.totalHostNum;i++ {
-		if int32(i%entryNum) == topo.localHostMod {
+		mod := i%(topo.remoteNum + 1)
+		if mod >= topo.localHostMod && mod < topo.localHostMod + topo.backupFactor {
 			localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
 			if !ok {
 				ret.Error(fmt.Errorf("no local host cfg found: %d", topo.localHostSchema))

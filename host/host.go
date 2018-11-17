@@ -35,11 +35,14 @@ type Host interface {
 
 	GetId() maybe.MaybeInt64
 	SetId(int64) maybe.MaybeError
+	Valid(bool)
+	IsValid() bool
 	Receive(message message.Message) maybe.MaybeError
 }
 
 type commonHost struct {
-	id int64
+	id    int64
+	valid bool
 }
 
 func (this *commonHost) GetId() (id maybe.MaybeInt64) {
@@ -57,6 +60,15 @@ func (this *commonHost) SetId(id int64) (err maybe.MaybeError) {
 		return
 	}
 	this.id = id
+	return
+}
+
+func (this *commonHost) IsValid() bool {
+	return this.valid
+}
+
+func (this *commonHost) Vaild(v bool) (err maybe.MaybeError) {
+	this.valid = v
 	return
 }
 

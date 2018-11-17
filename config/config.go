@@ -38,6 +38,12 @@ type Host struct {
 	Attributes interface{} `json:"Attributes"`
 }
 
+type Client struct {
+	Schema       int32       `json:"Schema"`
+	Class      string      `json:"Class"`
+	Attributes interface{} `json:"Attributes"`
+}
+
 type Config struct {
 	Topo struct {
 		Layer int32 `json:"Layer"`
@@ -57,6 +63,8 @@ type Config struct {
 	Messages map[int32]*Message
 	hosts    []*Host `json:"Hosts"`
 	Hosts    map[int32]*Host
+	clients    []*Host `json:"Clients"`
+	Clients    map[int32]*Client
 }
 
 func init() {
@@ -120,6 +128,15 @@ func (this *Config) Process() (err maybe.MaybeError) {
 			return
 		}
 		this.Hosts[h.Schema] = h
+	}
+
+	this.Clients = make(map[int32]*Client)
+	for _, c := range this.clients {
+		if c.Schema <= 0 {
+			err.Error(fmt.Errorf("illegal client schema: %d", c.Schema))
+			return
+		}
+		this.Clients[c.Schema] = c
 	}
 
 	topo.SetTopo(this).Test()
