@@ -79,7 +79,9 @@ func (this MaybeTopo) Right() Topo {
 }
 
 type commonTopo struct{
+	space string
 	layer int32
+	recover bool
 	messageCanonicalFromClass map[string]message.Message
 	messageCanonicalFromType map[int32]message.Message
 	routers map[int32]router.Router
@@ -87,7 +89,17 @@ type commonTopo struct{
 }
 
 func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError){
+	if cfg.Topo.Layer <= 0 {
+		err.Error(fmt.Errorf("illegal topo layer: %d", cfg.Topo.Layer))
+		return
+	}
+	if cfg.Topo.Space == "" {
+		err.Error(errors.New("empty topo space"))
+		return
+	}
 	this.layer = cfg.Topo.Layer
+	this.space = cfg.Topo.Space
+	this.recover = cfg.Topo.Recover
 
 	this.messageRouters = make(map[int32]router.Router)
 

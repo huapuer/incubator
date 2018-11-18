@@ -7,6 +7,8 @@ import (
 	"../common/maybe"
 	"../config"
 	"unsafe"
+	"github.com/incubator/actor"
+	"github.com/incubator/host"
 )
 
 const (
@@ -23,7 +25,7 @@ type pullUpMessage struct {
 	cfg *config.Config
 }
 
-func (this *pullUpMessage) Process(ctx context.Context) (err maybe.MaybeError) {
+func (this *pullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 	if this.cfg == nil {
 		err.Error(errors.New("cfg is nil"))
 		return

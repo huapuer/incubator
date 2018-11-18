@@ -11,6 +11,9 @@ import (
 	"unsafe"
 	"../topo"
 	"strings"
+	"github.com/incubator/serialization"
+	"github.com/incubator/actor"
+	"github.com/incubator/host"
 )
 
 var (
@@ -38,7 +41,8 @@ func GetMessagePrototype(name string) (ret MaybeMessage) {
 func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
 	tp := topo.GetTopo(layer).Right()
 	msgCanon := tp.GetMessageCanonicalFromType(typ).Right()
-	msg := msgCanon.Unmarshal(data, msgCanon).Right()
+	msg := msgCanon.Duplicate().Right()
+	serialization.Unmarshal(data, msg).Test()
 	router := tp.GetRouter(typ).Right()
 	router.Route(msg).Test()
 	return
@@ -60,20 +64,17 @@ func SendTo(m Message, topoId int32, hostId int64) (err maybe.MaybeError) {
 }
 
 type Message interface {
+	serialization.Serializable
+
 	SetLayer(uint8) maybe.MaybeError
 	GetLayer() uint8
 	SetType(uint8) maybe.MaybeError
 	GetType() uint8
 	Master(bool)
 	IsMaster() bool
-	GetSize() int32
-	Process(context.Context) maybe.MaybeError
+	Process(actor.Actor) maybe.MaybeError
 	GetHostId() maybe.MaybeInt64
 	SetHostId(int64) maybe.MaybeError
-	Marshal(Message) []byte
-	GetJsonBytes() maybe.MaybeBytes
-	SetJsonField([]byte) maybe.MaybeError
-	Unmarshal([]byte, Message) MaybeMessage
 	Duplicate() MaybeMessage
 }
 
@@ -155,81 +156,6 @@ func (this *commonMessage) SetHostId(hostId int64) (err maybe.MaybeError) {
 		return
 	}
 	this.hostId = hostId
-	return
-}
-
-type mimicSlice struct {
-	addr *unsafe.ArbitraryType
-	len  int
-	cap  int
-}
-
-type mimicIFace struct {
-	tab  unsafe.Pointer
-	data unsafe.Pointer
-}
-
-func (this *commonMessage) Marshal(msg Message) (ret []byte) {
-	mi := (*mimicIFace)(unsafe.Pointer(&msg))
-
-	size := msg.GetSize()
-	ms := &mimicSlice{mi.data, size, size}
-	val := *(*[]byte)(unsafe.Pointer(ms))
-
-	jbytes := msg.GetJsonBytes().Right()
-
-	lth := int32(len(val) + len(jbytes) + 1 + unsafe.Sizeof(int32(0)))
-
-	ret = append(ret, uint8(lth), uint8(len(val)))
-	ret = append(ret, val...)
-	if len(jbytes) > 0 {
-		ret = append(ret, jbytes...)
-	}
-
-	return
-}
-
-func (this *commonMessage) Unmarshal(data []byte, canon Message) (msg MaybeMessage) {
-	l := len(data)
-	if l < 4 {
-		msg.Error(fmt.Errorf("message bytes too short: %d", l))
-		return
-	}
-	lth := int(data[0])
-	if lth < 0 {
-		msg.Error(fmt.Errorf("message claims negative lenth: %d", lth))
-		return
-	}
-	if l != lth {
-		msg.Error(fmt.Errorf("message length not equal to claimed, %d != %d", l, lth))
-		return
-	}
-
-	lval := int(data[1])
-	if lth < 0 {
-		msg.Error(fmt.Errorf("message claims negative binary length: %d", lval))
-		return
-	}
-	if lth < lval+3 {
-		msg.Error(fmt.Errorf("message length shorter than claimed binary length + header length, %d  < %d + 3", l, lval))
-		return
-	}
-
-	val := data[2 : lval+2]
-
-	ms := (*mimicSlice)(unsafe.Pointer(&val))
-
-	mt := (*mimicIFace)(unsafe.Pointer(&canon))
-	mi := (*mimicIFace)(unsafe.Pointer(&msg.value))
-	mi.data = ms.addr
-	mi.tab = mt.tab
-
-	ljsn := lth - lval - 2
-	if ljsn > 0 {
-		jsn := data[lval+2 : lth]
-		canon.SetJsonField(jsn).Test()
-	}
-
 	return
 }
 

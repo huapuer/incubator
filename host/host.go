@@ -6,6 +6,8 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
+	"github.com/incubator/serialization"
+	"github.com/incubator/context"
 )
 
 var (
@@ -32,12 +34,22 @@ func GetHostPrototype(name string) (ret MaybeHost) {
 
 type Host interface {
 	config.IOC
+	serialization.Serializable
 
 	GetId() maybe.MaybeInt64
 	SetId(int64) maybe.MaybeError
 	Valid(bool)
 	IsValid() bool
 	Receive(message message.Message) maybe.MaybeError
+}
+
+type LocalHost interface {
+	Host
+
+	Duplicate() MaybeHost
+	FromPersistenceAsync(context.HostRecoverContext, string, int32, int64)
+	ToPersistence(string, int32) maybe.MaybeError
+	ToPersistenceAsync(context.AyncErrorContext, string, int32)
 }
 
 type commonHost struct {

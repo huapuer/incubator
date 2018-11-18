@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"../config"
 	"../host"
+	c "../context"
+	"context"
+	"github.com/incubator/common/maybe"
 )
 
 const (
@@ -83,7 +86,7 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 }
 
 func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
-	this.Init(cfg)
+	this.Init(cfg).Test()
 
 	ret := MaybeTopo{}
 	topo := &defaultTopo{
@@ -206,6 +209,14 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.remoteHosts, host.GetHostPrototype(remoteHostCfg.Class).Right().(config.IOC).New(remoteHostCfg.Attributes, cfg).(host.MaybeHost).Right())
 	}
 
+	var (
+		recoverCtx c.HostRecoverContext
+		recoverCancel context.CancelFunc
+	)
+	if this.recover {
+		recoverCtx, recoverCancel = c.NewHostRecoverContext()
+	}
+
 	for i:=0;int64(i)<topo.totalHostNum;i++ {
 		mod := i%(topo.remoteNum + 1)
 		if mod >= topo.localHostMod && mod < topo.localHostMod + topo.backupFactor {
@@ -214,9 +225,31 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 				ret.Error(fmt.Errorf("no local host cfg found: %d", topo.localHostSchema))
 				return ret
 			}
-			localHost := host.GetHostPrototype(localHostCfg.Class).Right().New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
-			localHost.SetId(int64(i))
-			topo.localHosts = append(topo.localHosts, localHost)
+			if this.recover {
+				host.GetHostPrototype(localHostCfg.Class).Right().(host.LocalHost).FromPersistenceAsync(
+					recoverCtx,
+					this.space,
+					this.layer,
+					int64(i))
+			}else{
+				localHost := host.GetHostPrototype(localHostCfg.Class).Right().New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
+				localHost.SetId(int64(i))
+				topo.localHosts = append(topo.localHosts, localHost)
+			}
+		}
+	}
+
+	if this.recover {
+		for _, host := range recoverCtx.Ret {
+			maybe.TryCatch(
+				func(){
+					topo.localHosts = append(topo.localHosts, host.Right())
+				},
+				func(err error){
+					recoverCancel()
+					ret.Error(err)
+					return
+				})
 		}
 	}
 

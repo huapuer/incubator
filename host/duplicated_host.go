@@ -37,3 +37,15 @@ func (this *duplicatedHost) Receive(msg message.Message) (err maybe.MaybeError) 
 	}
 	return
 }
+
+func (this duplicatedHost) GetJsonBytes() (ret maybe.MaybeBytes) {
+	panic("not implemented")
+}
+
+func (this *duplicatedHost) SetJsonField(data []byte) (err maybe.MaybeError) {
+	panic("not implemented")
+}
+
+func (this duplicatedHost) GetSize() int32 {
+	panic("not implemented")
+}

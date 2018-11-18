@@ -47,10 +47,7 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 			case m := <-this.mailbox:
 				maybe.TryCatch(
 					func() {
-						ctx := c.MessageContext{
-							Runner: this,
-						}
-						m.Process(ctx).Test()
+						m.Process(this).Test()
 					}, nil)
 			}
 		}

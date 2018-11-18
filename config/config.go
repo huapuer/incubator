@@ -46,7 +46,9 @@ type Client struct {
 
 type Config struct {
 	Topo struct {
+		Space string `json:"Space"`
 		Layer int32 `json:"Layer"`
+		Recover bool `json:"Recover"`
 		Class      string      `json:"Topology"`
 		Attributes interface{} `json:"Attributes"`
 		//LocalHostClass  string `json:"LocalHost"`
