@@ -49,7 +49,7 @@ func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
 }
 
 func Route(m Message) (err maybe.MaybeError) {
-	tp:=topo.GetTopo(m.GetType()).Right()
+	tp:=topo.GetTopo(m.GetLayer()).Right()
 	router := tp.GetRouter(m.GetType()).Right()
 	router.Route(m).Test()
 	return
