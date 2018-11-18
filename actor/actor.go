@@ -34,7 +34,7 @@ type Actor interface {
 	config.IOC
 
 	Start(ctx context.Context) maybe.MaybeError
-	Receive(message.AttachedMessage) maybe.MaybeError
+	Receive(message.Message) maybe.MaybeError
 }
 
 type MaybeActor struct {
