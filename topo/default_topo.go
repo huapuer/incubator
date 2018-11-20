@@ -32,8 +32,8 @@ type defaultTopo struct {
 }
 
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
-	mod := int32(id%(int64(this.remoteNum) + 1))
-	idx := int32(id/int64(this.remoteNum + 1)/int64(this.backupFactor + 1))+mod
+	mod := int32(id%(int64(this.remoteNum)))
+	idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor + 1))+mod
 	hosts := make([]host.Host, 0, 0)
 
 	if mod == this.localHostMod {
@@ -43,11 +43,7 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 		}
 		hosts = append(hosts, this.localHosts[idx])
 	}else{
-		ridx := mod
-		if mod > this.localHostMod {
-			ridx--
-		}
-		hosts = append(hosts, this.remoteHosts[ridx])
+		hosts = append(hosts, this.remoteHosts[mod])
 	}
 	if mod < this.localHostMod + this.backupFactor {
 		if idx > int32(len(this.localHosts)) {
@@ -57,10 +53,7 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 		hosts = append(hosts, this.localHosts[idx])
 	}
 	for offset:=int32(0);offset < this.backupFactor - 1;offset++{
-		ridx := (mod + offset)% (this.remoteNum + 1)
-		if mod > this.localHostMod {
-			ridx--
-		}
+		ridx := (mod + offset)% (this.remoteNum)
 		hosts = append(hosts, this.remoteHosts[ridx])
 	}
 
@@ -83,6 +76,10 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 
 	ret.Value(host.NewDuplicatedHost(master, slaves).Right())
 	return
+}
+
+func (this defaultTopo) GetRemoteHosts() []host.Host {
+	return this.remoteHosts
 }
 
 func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
@@ -218,7 +215,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 
 	for i:=int64(0);i<topo.totalHostNum;i++ {
-		mod := int32(i)%(topo.remoteNum + 1)
+		mod := int32(i)%topo.remoteNum
 		if mod >= topo.localHostMod && mod < topo.localHostMod + topo.backupFactor {
 			localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
 			if !ok {

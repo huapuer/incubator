@@ -51,6 +51,7 @@ type Topo interface {
 	config.IOC
 
 	Lookup(int64) host.MaybeHost
+	GetRemoteHosts() []host.Host
 	GetRouter(int32) router.MaybeRouter
 	GetMessageFromClass(string) message.MaybeMessage
 	GetMessageCanonicalFromType(int32) message.MaybeMessage
