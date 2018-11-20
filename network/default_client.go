@@ -2,11 +2,11 @@ package network
 
 import (
 	"../common/maybe"
-	"../message"
 	"../config"
-	"fmt"
+	"../message"
+	"../serialization"
 	"errors"
-	"incubator/serialization"
+	"fmt"
 	"time"
 )
 
@@ -104,7 +104,7 @@ func (this *defaultClient) New(attrs interface{}, cfg config.Config) config.IOC 
 	return ret
 }
 
-func (this *defaultClient) Send(msg message.Message) (err maybe.MaybeError) {
+func (this *defaultClient) Send(msg message.RemoteMessage) (err maybe.MaybeError) {
 	_, e := this.pool.GetConnection().Right().Write(serialization.Marshal(msg))
 	if e != nil {
 		err.Error(e)

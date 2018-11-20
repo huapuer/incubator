@@ -1,13 +1,13 @@
 package host
 
 import (
-	"fmt"
 	"../common/maybe"
-	"unsafe"
-	"../network"
-	"errors"
 	"../config"
 	"../message"
+	"../network"
+	"errors"
+	"fmt"
+	"unsafe"
 )
 
 const (
@@ -62,8 +62,8 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 
 	//TODO: real logic
 	ret.Value(&defaultRemoteHost{
-		commonHost:commonHost{
-			valid:true,
+		commonHost: commonHost{
+			valid: true,
 		},
 		client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),
 	})

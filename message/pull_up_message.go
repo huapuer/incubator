@@ -1,20 +1,27 @@
 package message
 
 import (
-	"encoding/json"
-	"errors"
+	"../actor"
 	"../common/maybe"
 	"../config"
+	"encoding/json"
+	"errors"
 	"unsafe"
-	"../actor"
 )
 
 const (
 	pullUpMessageClassName = "message.pullUpMessage"
 )
 
-func init(){
-	RegisterMessagePrototype(pullUpMessageClassName, &pullUpMessage{}).Test()
+func init() {
+	RegisterMessagePrototype(pullUpMessageClassName, &pullUpMessage{
+		commonMessage: commonMessage{
+			layer:  -1,
+			typ:    -1,
+			master: -1,
+			hostId: -1,
+		},
+	}).Test()
 }
 
 type pullUpMessage struct {
@@ -54,7 +61,7 @@ func (this *pullUpMessage) GetSize() int32 {
 	return int32(unsafe.Sizeof(*this))
 }
 
-func (this *pullUpMessage) Duplicate() (ret MaybeMessage) {
+func (this *pullUpMessage) Duplicate() (ret MaybeRemoteMessage) {
 	new := &pullUpMessage{}
 	new.copyPaste(new)
 	ret.Value(new)

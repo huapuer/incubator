@@ -7,7 +7,7 @@ import (
 	"incubator/config"
 )
 
-type duplicatedHost struct{
+type duplicatedHost struct {
 	commonHost
 
 	master Host
@@ -16,8 +16,8 @@ type duplicatedHost struct{
 
 func NewDuplicatedHost(master Host, slaves []Host) (ret MaybeHost) {
 	ret.Value(&duplicatedHost{
-		master:master,
-		slaves:slaves,
+		master: master,
+		slaves: slaves,
 	})
 	return
 }

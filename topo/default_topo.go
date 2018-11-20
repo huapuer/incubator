@@ -1,13 +1,13 @@
 package topo
 
 import (
+	"../common/maybe"
+	"../config"
+	c "../context"
+	"../host"
+	"context"
 	"errors"
 	"fmt"
-	"../config"
-	"../host"
-	c "../context"
-	"context"
-	"../common/maybe"
 )
 
 const (
@@ -21,19 +21,19 @@ func init() {
 type defaultTopo struct {
 	commonTopo
 
-	totalHostNum    int64
-	localHostMod    int32
-	backupFactor    int32
+	totalHostNum     int64
+	localHostMod     int32
+	backupFactor     int32
 	localHostSchema  int32
 	remoteHostSchema int32
-	localHosts      []host.Host
-	remoteHosts     []host.Host
-	remoteNum       int32
+	localHosts       []host.Host
+	remoteHosts      []host.Host
+	remoteNum        int32
 }
 
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
-	mod := int32(id%(int64(this.remoteNum)))
-	idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor + 1))+mod
+	mod := int32(id % (int64(this.remoteNum)))
+	idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
 	hosts := make([]host.Host, 0, 0)
 
 	if mod == this.localHostMod {
@@ -42,25 +42,25 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 			return
 		}
 		hosts = append(hosts, this.localHosts[idx])
-	}else{
+	} else {
 		hosts = append(hosts, this.remoteHosts[mod])
 	}
-	if mod < this.localHostMod + this.backupFactor {
+	if mod < this.localHostMod+this.backupFactor {
 		if idx > int32(len(this.localHosts)) {
 			ret.Error(fmt.Errorf("slave id exceeds local host range: %d", id))
 			return
 		}
 		hosts = append(hosts, this.localHosts[idx])
 	}
-	for offset:=int32(0);offset < this.backupFactor - 1;offset++{
-		ridx := (mod + offset)% (this.remoteNum)
+	for offset := int32(0); offset < this.backupFactor-1; offset++ {
+		ridx := (mod + offset) % (this.remoteNum)
 		hosts = append(hosts, this.remoteHosts[ridx])
 	}
 
 	var master host.Host
 	slaves := make([]host.Host, 0, 0)
 	for _, h := range hosts {
-		if h.IsValid(){
+		if h.IsValid() {
 			if master == nil {
 				master = h
 			} else {
@@ -87,10 +87,10 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	ret := MaybeTopo{}
 	topo := &defaultTopo{
-		commonTopo:commonTopo{
+		commonTopo: commonTopo{
 			layer: cfg.Topo.Layer,
 		},
-		localHosts: make([]host.Host, 0, 0),
+		localHosts:  make([]host.Host, 0, 0),
 		remoteHosts: make([]host.Host, 0, 0),
 	}
 	attrsMap, ok := cfg.Topo.Attributes.(map[string]interface{})
@@ -145,7 +145,6 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		return ret
 	}
 	topo.backupFactor = backupFactoInt
-
 
 	localHostSchema, ok := attrsMap["LocalHostSchema"]
 	if !ok {
@@ -207,16 +206,16 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 
 	var (
-		recoverCtx c.HostRecoverContext
+		recoverCtx    c.HostRecoverContext
 		recoverCancel context.CancelFunc
 	)
 	if this.recover {
 		recoverCtx, recoverCancel = c.NewHostRecoverContext()
 	}
 
-	for i:=int64(0);i<topo.totalHostNum;i++ {
-		mod := int32(i)%topo.remoteNum
-		if mod >= topo.localHostMod && mod < topo.localHostMod + topo.backupFactor {
+	for i := int64(0); i < topo.totalHostNum; i++ {
+		mod := int32(i) % topo.remoteNum
+		if mod >= topo.localHostMod && mod < topo.localHostMod+topo.backupFactor {
 			localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
 			if !ok {
 				ret.Error(fmt.Errorf("no local host cfg found: %d", topo.localHostSchema))
@@ -228,7 +227,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 					this.space,
 					this.layer,
 					int64(i))
-			}else{
+			} else {
 				localHost := host.GetHostPrototype(localHostCfg.Class).Right().New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
 				localHost.SetId(int64(i))
 				topo.localHosts = append(topo.localHosts, localHost)
@@ -239,10 +238,10 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	if this.recover {
 		for host := range recoverCtx.Ret {
 			maybe.TryCatch(
-				func(){
+				func() {
 					topo.localHosts = append(topo.localHosts, host.Right())
 				},
-				func(err error){
+				func(err error) {
 					recoverCancel()
 					ret.Error(err)
 					return

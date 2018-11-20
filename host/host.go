@@ -1,13 +1,13 @@
 package host
 
 import (
-	"errors"
-	"fmt"
 	"../common/maybe"
 	"../config"
+	"../context"
 	"../message"
 	"../serialization"
-	"../context"
+	"errors"
+	"fmt"
 )
 
 var (

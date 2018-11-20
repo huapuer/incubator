@@ -1,12 +1,11 @@
 package actor
 
 import (
-	c "../context"
-	"context"
-	"errors"
 	"../common/maybe"
 	"../config"
 	"../message"
+	"context"
+	"errors"
 )
 
 const (
@@ -19,7 +18,6 @@ func init() {
 
 type defaultActor struct {
 	commonActor
-	mailBox
 }
 
 func (this defaultActor) New(attrs interface{}, cfg config.Config) config.IOC {

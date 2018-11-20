@@ -1,18 +1,18 @@
 package topo
 
 import (
-	"errors"
-	"fmt"
 	"../common/maybe"
 	"../config"
 	"../host"
 	"../message"
 	"../router"
+	"errors"
+	"fmt"
 )
 
 var (
 	topoPrototype = make(map[string]Topo)
-	topos    = make(map[int32]Topo)
+	topos         = make(map[int32]Topo)
 )
 
 func RegisterTopoPrototype(name string, val Topo) (err maybe.MaybeError) {
@@ -25,7 +25,7 @@ func RegisterTopoPrototype(name string, val Topo) (err maybe.MaybeError) {
 }
 
 func SetTopo(cfg config.Config) (err maybe.MaybeError) {
-	if _, ok :=topos[cfg.Topo.Layer]; ok{
+	if _, ok := topos[cfg.Topo.Layer]; ok {
 		err.Error(fmt.Errorf("topo has been set: %d", cfg.Topo.Layer))
 		return
 	}
@@ -39,7 +39,7 @@ func SetTopo(cfg config.Config) (err maybe.MaybeError) {
 }
 
 func GetTopo(layer int32) (ret MaybeTopo) {
-	if topo, ok := topos[layer];ok {
+	if topo, ok := topos[layer]; ok {
 		ret.Value(topo)
 		return
 	}
@@ -53,8 +53,8 @@ type Topo interface {
 	Lookup(int64) host.MaybeHost
 	GetRemoteHosts() []host.Host
 	GetRouter(int32) router.MaybeRouter
-	GetMessageFromClass(string) message.MaybeMessage
-	GetMessageCanonicalFromType(int32) message.MaybeMessage
+	GetMessageFromClass(string) message.MaybeRemoteMessage
+	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
 }
 
 type MaybeTopo struct {
@@ -78,17 +78,17 @@ func (this MaybeTopo) Right() Topo {
 	return this.value
 }
 
-type commonTopo struct{
-	space string
-	layer int32
-	recover bool
-	messageCanonicalFromClass map[string]message.Message
-	messageCanonicalFromType map[int32]message.Message
-	routers map[int32]router.Router
-	messageRouters map[int32]router.Router
+type commonTopo struct {
+	space                     string
+	layer                     int32
+	recover                   bool
+	messageCanonicalFromClass map[string]message.RemoteMessage
+	messageCanonicalFromType  map[int32]message.RemoteMessage
+	routers                   map[int32]router.Router
+	messageRouters            map[int32]router.Router
 }
 
-func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError){
+func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError) {
 	if cfg.Topo.Layer <= 0 {
 		err.Error(fmt.Errorf("illegal topo layer: %d", cfg.Topo.Layer))
 		return
@@ -112,15 +112,15 @@ func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError){
 		this.routers[routerCfg.Id] = routerPrototype
 	}
 
-	this.messageCanonicalFromClass = make(map[string]message.Message)
-	this.messageCanonicalFromType = make(map[int32]message.Message)
+	this.messageCanonicalFromClass = make(map[string]message.RemoteMessage)
+	this.messageCanonicalFromType = make(map[int32]message.RemoteMessage)
 
 	for _, msgCfg := range cfg.Messages {
 		if _, ok := this.messageCanonicalFromType[msgCfg.Type]; ok {
 			err.Error(fmt.Errorf("message canonical type already exists: %d", msgCfg.Type))
 			return
 		}
-		if _, ok := this.messageCanonicalFromClass[msgCfg.Class]; ok{
+		if _, ok := this.messageCanonicalFromClass[msgCfg.Class]; ok {
 			err.Error(fmt.Errorf("message canonical class already exists: %s", msgCfg.Class))
 			return
 		}
@@ -130,8 +130,8 @@ func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError){
 
 		msgPrototype := message.GetMessagePrototype(msgCfg.Class).Right()
 		msgCanon := msgPrototype.Duplicate().Right()
-		msgCanon.SetLayer(uint8(this.layer))
-		msgCanon.SetType(uint8(msgCfg.Type))
+		msgCanon.SetLayer(int8(this.layer))
+		msgCanon.SetType(int8(msgCfg.Type))
 
 		// TODO: deep copy
 		this.messageCanonicalFromType[msgCfg.Type] = msgCanon
@@ -151,7 +151,7 @@ func (this commonTopo) GetRouter(id int32) (ret router.MaybeRouter) {
 	return
 }
 
-func (this commonTopo) GetMessageFromClass(name string) (ret message.MaybeMessage) {
+func (this commonTopo) GetMessageFromClass(name string) (ret message.MaybeRemoteMessage) {
 	if val, ok := this.messageCanonicalFromClass[name]; ok {
 		ret.Value(val.Duplicate().Right())
 		return
@@ -160,7 +160,7 @@ func (this commonTopo) GetMessageFromClass(name string) (ret message.MaybeMessag
 	return
 }
 
-func (this commonTopo) GetMessageCanonicalFromType(typ int32) (ret message.MaybeMessage) {
+func (this commonTopo) GetMessageCanonicalFromType(typ int32) (ret message.MaybeRemoteMessage) {
 	if val, ok := this.messageCanonicalFromType[typ]; ok {
 		ret.Value(val)
 		return

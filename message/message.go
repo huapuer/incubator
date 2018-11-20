@@ -1,20 +1,20 @@
 package message
 
 import (
+	"../actor"
+	"../common/maybe"
+	"../serialization"
+	"../topo"
 	"context"
 	"errors"
 	"fmt"
-	"../common/maybe"
-	"../topo"
-	"../serialization"
-	"../actor"
 )
 
 var (
-	messagePrototype = make(map[string]Message)
+	messagePrototype = make(map[string]RemoteMessage)
 )
 
-func RegisterMessagePrototype(name string, val Message) (err maybe.MaybeError){
+func RegisterMessagePrototype(name string, val RemoteMessage) (err maybe.MaybeError) {
 	if _, ok := messagePrototype[name]; ok {
 		err.Error(fmt.Errorf("message prototype redefined: %s", name))
 		return
@@ -23,8 +23,8 @@ func RegisterMessagePrototype(name string, val Message) (err maybe.MaybeError){
 	return
 }
 
-func GetMessagePrototype(name string) (ret MaybeMessage) {
-	if msg, ok := messagePrototype[name]; ok{
+func GetMessagePrototype(name string) (ret MaybeRemoteMessage) {
+	if msg, ok := messagePrototype[name]; ok {
 		ret.Value(msg)
 		return
 	}
@@ -42,8 +42,8 @@ func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
 	return
 }
 
-func Route(m Message) (err maybe.MaybeError) {
-	tp:=topo.GetTopo(int32(m.GetLayer())).Right()
+func Route(m RemoteMessage) (err maybe.MaybeError) {
+	tp := topo.GetTopo(int32(m.GetLayer())).Right()
 	router := tp.GetRouter(int32(m.GetType())).Right()
 	router.Route(m).Test()
 	return
@@ -58,40 +58,44 @@ func SendTo(m Message, topoId int32, hostId int64) (err maybe.MaybeError) {
 }
 
 type Message interface {
+	Process(actor.Actor) maybe.MaybeError
+}
+
+type RemoteMessage interface {
+	Message
 	serialization.Serializable
 
-	SetLayer(uint8) maybe.MaybeError
-	GetLayer() uint8
-	SetType(uint8) maybe.MaybeError
-	GetType() uint8
-	Master(bool)
-	IsMaster() bool
-	Process(actor.Actor) maybe.MaybeError
+	SetLayer(int8) maybe.MaybeError
+	GetLayer() int8
+	SetType(int8) maybe.MaybeError
+	GetType() int8
+	Master(int8)
+	IsMaster() int8
 	GetHostId() maybe.MaybeInt64
 	SetHostId(int64) maybe.MaybeError
-	Duplicate() MaybeMessage
+	Duplicate() MaybeRemoteMessage
 }
 
-type MaybeMessage struct {
+type MaybeRemoteMessage struct {
 	maybe.MaybeError
 
-	value Message
+	value RemoteMessage
 }
 
-func (this MaybeMessage) Value(value Message) {
+func (this MaybeRemoteMessage) Value(value RemoteMessage) {
 	this.Error(nil)
 	this.value = value
 }
 
-func (this MaybeMessage) Right() Message {
+func (this MaybeRemoteMessage) Right() RemoteMessage {
 	this.Test()
 	return this.value
 }
 
 type commonMessage struct {
-	layer  uint8
-	typ    uint8
-	master bool
+	layer  int8
+	typ    int8
+	master int8
 	hostId int64
 }
 
@@ -100,11 +104,11 @@ func (this *commonMessage) Process(ctx context.Context) (err maybe.MaybeError) {
 	return
 }
 
-func (this *commonMessage) GetLayer() uint8 {
+func (this *commonMessage) GetLayer() int8 {
 	return this.layer
 }
 
-func (this *commonMessage) SetLayer(layer uint8) (err maybe.MaybeError) {
+func (this *commonMessage) SetLayer(layer int8) (err maybe.MaybeError) {
 	if layer <= 0 {
 		err.Error(fmt.Errorf("illegal message layer: %d", layer))
 		return
@@ -113,11 +117,11 @@ func (this *commonMessage) SetLayer(layer uint8) (err maybe.MaybeError) {
 	return
 }
 
-func (this *commonMessage) GetType() uint8 {
+func (this *commonMessage) GetType() int8 {
 	return this.typ
 }
 
-func (this *commonMessage) SetType(typ uint8) (err maybe.MaybeError) {
+func (this *commonMessage) SetType(typ int8) (err maybe.MaybeError) {
 	if typ <= 0 {
 		err.Error(fmt.Errorf("illegal message type: %d", typ))
 		return
@@ -126,11 +130,11 @@ func (this *commonMessage) SetType(typ uint8) (err maybe.MaybeError) {
 	return
 }
 
-func (this *commonMessage) IsMaster() bool {
+func (this *commonMessage) IsMaster() int8 {
 	return this.master
 }
 
-func (this *commonMessage) Master(b bool) {
+func (this *commonMessage) Master(b int8) {
 	this.master = b
 	return
 }
@@ -153,7 +157,7 @@ func (this *commonMessage) SetHostId(hostId int64) (err maybe.MaybeError) {
 	return
 }
 
-func (this commonMessage) copyPaste (msg Message) {
+func (this commonMessage) copyPaste(msg RemoteMessage) {
 	msg.SetType(this.typ)
 	msg.SetLayer(this.layer)
 }
@@ -165,15 +169,20 @@ type SeesionedMessage interface {
 	GetSesseionId() int64
 	ToServer()
 	ToClient()
-	IsToServer() bool
+	IsToServer() maybe.MaybeBool
 }
 
 type commonSessionedMessage struct {
 	commonMessage
 
-	toServer maybe.MaybeBool
+	toServer  int8
 	sessionId int64
 }
+
+const (
+	SESSEION_MESSAGE_TO_SERVER = iota
+	SESSION_MESSAGE_TO_CLIENT
+)
 
 func (this commonSessionedMessage) GetSessionId() int64 {
 	return this.sessionId
@@ -184,13 +193,18 @@ func (this *commonSessionedMessage) SetSessionId(sid int64) {
 }
 
 func (this *commonSessionedMessage) ToServer() {
-	this.toServer.Value(true)
+	this.toServer = SESSEION_MESSAGE_TO_SERVER
 }
 
 func (this *commonSessionedMessage) ToClient() {
-	this.toServer.Value(false)
+	this.toServer = SESSION_MESSAGE_TO_CLIENT
 }
 
-func (this commonSessionedMessage) IsToServer() bool {
-	return this.toServer.Right()
+func (this commonSessionedMessage) IsToServer() (ret maybe.MaybeBool) {
+	if this.toServer < 0 {
+		ret.Error(fmt.Errorf("is to server flag not set"))
+		return
+	}
+	ret.Value(this.toServer == SESSEION_MESSAGE_TO_SERVER)
+	return
 }

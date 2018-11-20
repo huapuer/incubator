@@ -2,12 +2,12 @@ package network
 
 import (
 	"../common/maybe"
-	"../message"
 	"../config"
+	"../message"
 )
 
 type Client interface {
 	config.IOC
 
-	Send(message message.Message) maybe.MaybeError
+	Send(message message.RemoteMessage) maybe.MaybeError
 }

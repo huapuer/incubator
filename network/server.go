@@ -1,11 +1,11 @@
 package network
 
 import (
+	"../common/maybe"
 	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"../common/maybe"
 	"math/rand"
 	"net"
 	"time"
@@ -44,15 +44,15 @@ func (this commonServer) Start(server Server, ctx context.Context, network strin
 		select {
 		case <-ctx.Done():
 			return
-		case c, err := l.Accept():
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			maybe.TryCatch(func() {
-				go server.handleConnection(server, ctx, c)
-			}, nil)
 		}
+		c, err := l.Accept()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		maybe.TryCatch(func() {
+			go server.handleConnection(server, ctx, c)
+		}, nil)
 	}
 }
 
@@ -64,16 +64,15 @@ func (this commonServer) handleConnection(server Server, ctx context.Context, c 
 		select {
 		case <-ctx.Done():
 			return
-		case len, err := reader.Read(buffer):
-			if err != nil {
-				panic(err)
-			}
-			server.handleData(buffer, len).Test()
 		}
+		len, err := reader.Read(buffer)
+		if err != nil {
+			panic(err)
+		}
+		server.handleData(buffer, len).Test()
 	}
 	return
 }
-
 
 func (this commonServer) handlePacakge(server Server, data []byte) (err maybe.MaybeError) {
 	server.handlePackage(data)

@@ -2,11 +2,11 @@ package host
 
 import (
 	"../common/maybe"
+	"../config"
 	"../message"
-	"incubator/config"
-	"net"
+	"../serialization"
 	"fmt"
-	"incubator/serialization"
+	"net"
 )
 
 const (
@@ -17,10 +17,10 @@ func init() {
 	RegisterHostPrototype(defaultPeerHostClassName, &peerHost{}).Test()
 }
 
-type peerHost struct{
+type peerHost struct {
 	commonHost
 
-	peers map[int64] net.Conn
+	peers map[int64]net.Conn
 }
 
 func (this *peerHost) Receive(msg message.Message) (err maybe.MaybeError) {
@@ -29,9 +29,9 @@ func (this *peerHost) Receive(msg message.Message) (err maybe.MaybeError) {
 		err.Error(fmt.Errorf("peer host receiving not sessioned message: %+v", msg))
 		return
 	}
-	if m.IsToServer() {
+	if m.IsToServer().Right() {
 		message.Route(m).Test()
-	}else{
+	} else {
 		peer, ok := this.peers[m.GetSesseionId()]
 		if !ok {
 			err.Error(fmt.Errorf("peer not found: %d", m.GetSesseionId()))
@@ -49,7 +49,7 @@ func (this *peerHost) Receive(msg message.Message) (err maybe.MaybeError) {
 func (this peerHost) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeHost{}
 	ret.Value(&peerHost{
-		peers:make(map[int64] net.Conn),
+		peers: make(map[int64]net.Conn),
 	})
 	return ret
 }
@@ -65,4 +65,3 @@ func (this *peerHost) SetJsonField(data []byte) (err maybe.MaybeError) {
 func (this peerHost) GetSize() int32 {
 	panic("not implemented")
 }
-

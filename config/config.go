@@ -1,15 +1,15 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
 	"../common/maybe"
 	"../topo"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 )
 
 type Actor struct {
-	Schema       int32       `json:"Schema"`
+	Schema     int32       `json:"Schema"`
 	Class      string      `json:"Class"`
 	Attributes interface{} `json:"Attributes"`
 }
@@ -21,28 +21,28 @@ type Router struct {
 }
 
 type Message struct {
-	Type        int32    `json:"Type"`
-	Class       string `json:"Class"`
-	RouterId int32 `json:"RouterId"`
+	Type     int32  `json:"Type"`
+	Class    string `json:"Class"`
+	RouterId int32  `json:"RouterId"`
 }
 
 type Host struct {
-	Schema       int32       `json:"Schema"`
+	Schema     int32       `json:"Schema"`
 	Class      string      `json:"Class"`
 	Attributes interface{} `json:"Attributes"`
 }
 
 type Client struct {
-	Schema       int32       `json:"Schema"`
+	Schema     int32       `json:"Schema"`
 	Class      string      `json:"Class"`
 	Attributes interface{} `json:"Attributes"`
 }
 
 type Config struct {
 	Topo struct {
-		Space string `json:"Space"`
-		Layer int32 `json:"Layer"`
-		Recover bool `json:"Recover"`
+		Space      string      `json:"Space"`
+		Layer      int32       `json:"Layer"`
+		Recover    bool        `json:"Recover"`
 		Class      string      `json:"Topology"`
 		Attributes interface{} `json:"Attributes"`
 		//LocalHostClass  string `json:"LocalHost"`
@@ -59,8 +59,8 @@ type Config struct {
 	Messages map[int32]*Message
 	hosts    []*Host `json:"Hosts"`
 	Hosts    map[int32]*Host
-	clients    []*Client `json:"Clients"`
-	Clients    map[int32]*Client
+	clients  []*Client `json:"Clients"`
+	Clients  map[int32]*Client
 }
 
 func init() {
@@ -78,13 +78,13 @@ func init() {
 }
 
 func (this *Config) Process() (err maybe.MaybeError) {
-	if this.Topo.Layer <= 0 {
+	if this.Topo.Layer < 0 {
 		err.Error(fmt.Errorf("illegal topo layer: %d", this.Topo.Layer))
 	}
 
 	this.Actors = make(map[int32]*Actor)
 	for _, a := range this.actors {
-		if a.Schema <= 0 {
+		if a.Schema < 0 {
 			err.Error(fmt.Errorf("illegal actor schema: %d", a.Schema))
 			return
 		}
@@ -106,7 +106,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	this.Messages = make(map[int32]*Message)
 	for _, m := range this.messages {
-		if m.Type <= 0 {
+		if m.Type < 0 {
 			err.Error(fmt.Errorf("illegal message type: %d", m.Type))
 			return
 		}
@@ -119,7 +119,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	this.Hosts = make(map[int32]*Host)
 	for _, h := range this.hosts {
-		if h.Schema <= 0 {
+		if h.Schema < 0 {
 			err.Error(fmt.Errorf("illegal host schema: %d", h.Schema))
 			return
 		}
@@ -128,7 +128,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	this.Clients = make(map[int32]*Client)
 	for _, c := range this.clients {
-		if c.Schema <= 0 {
+		if c.Schema < 0 {
 			err.Error(fmt.Errorf("illegal client schema: %d", c.Schema))
 			return
 		}

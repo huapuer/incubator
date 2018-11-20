@@ -23,24 +23,24 @@ func (this spikeRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
 
 	maybe.TryCatch(
-		func(){
+		func() {
 			r := defaultRouter{}.New(attrs, cfg).(MaybeRouter).Right()
 			ret.Value(&spikeRouter{r.(defaultRouter)})
 		},
-		func(err error){
+		func(err error) {
 			ret.Error(err)
 		})
 
 	return ret
 }
 
-func (this spikeRouter) Route(msg message.Message) (err maybe.MaybeError) {
+func (this spikeRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
 	maybe.TryCatch(
-		func(){
+		func() {
 			this.router.Route(msg).Test()
 			runtime.Gosched()
 		},
-		func(e error){
+		func(e error) {
 			err.Error(e)
 		})
 

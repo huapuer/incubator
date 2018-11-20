@@ -1,11 +1,11 @@
 package actor
 
 import (
-	"context"
-	"errors"
 	"../common/maybe"
 	"../config"
 	"../message"
+	"context"
+	"errors"
 	"sync"
 )
 
@@ -19,11 +19,10 @@ func init() {
 
 type spikeActor struct {
 	commonActor
-	mailBox
 
-	waked   bool
-	ctx     context.Context
-	mutex   *sync.Mutex
+	waked bool
+	ctx   context.Context
+	mutex *sync.Mutex
 }
 
 func (this spikeActor) New(attrs interface{}, cfg config.Config) config.IOC {

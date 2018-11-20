@@ -1,12 +1,12 @@
 package router
 
 import (
-	"fmt"
-	"incubator/actor"
-	"incubator/message"
-	"incubator/common/maybe"
-	"incubator/config"
+	"../actor"
+	"../common/maybe"
+	"../config"
+	"../message"
 	"errors"
+	"fmt"
 )
 
 const (
@@ -24,12 +24,12 @@ type dummyRouter struct {
 func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
 	attrsMap, ok := attrs.(map[string]interface{})
-	if !ok{
+	if !ok {
 		ret.Error(fmt.Errorf("illegal cfg type when new router %s", defaultRouterClassName))
 		return ret
 	}
 	actorSchema, ok := attrsMap["ActorSchema"]
-	if !ok{
+	if !ok {
 		ret.Error(fmt.Errorf("no router attribute found: %s", "ActorClass"))
 		return ret
 	}
@@ -46,20 +46,20 @@ func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	actorAttrs := actorCfg.Attributes
 	if actorAttrs == nil {
-		if !ok{
+		if !ok {
 			ret.Error(fmt.Errorf("no actor attribute found: %d", actorSchemaInt))
 			return ret
 		}
 	}
 	newRouter := &dummyRouter{
-		actor :actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right(),
+		actor: actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right(),
 	}
 
 	ret.Value(newRouter)
 	return ret
 }
 
-func (this dummyRouter) Route(msg message.Message) (err maybe.MaybeError) {
+func (this dummyRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
 	if this.actor == nil {
 		err.Error(errors.New("actor not set"))
 		return

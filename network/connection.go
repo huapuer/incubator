@@ -1,14 +1,14 @@
 package network
 
 import (
-	"net"
 	"../common/maybe"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 )
 
-type connectionPool struct{
+type connectionPool struct {
 	addr    string
 	maxIdle int32
 	maxBusy int32
@@ -42,18 +42,18 @@ func NewConnectionPool(addr string, maxIdle int32, maxBusy int32, timeout time.D
 		ret.Error(fmt.Errorf("illegal max spare(expecting >=0): %d", maxIdle))
 		return
 	}
-	if maxBusy <=0 {
+	if maxBusy <= 0 {
 		ret.Error(fmt.Errorf("illegal max busy(expecting >0): %d", maxBusy))
 		return
 	}
 
 	ret.Value(connectionPool{
-		addr: addr,
+		addr:    addr,
 		maxIdle: maxIdle,
 		maxBusy: maxBusy,
 		timeout: timeout,
-		idle: make(chan net.Conn, maxIdle),
-		busy: make(chan struct{}, maxBusy),
+		idle:    make(chan net.Conn, maxIdle),
+		busy:    make(chan struct{}, maxBusy),
 	})
 	return
 }
@@ -75,8 +75,8 @@ func (this MaybeConnection) Right() net.Conn {
 }
 
 func (this connectionPool) GetConnection() (ret MaybeConnection) {
-	select{
-	case c := <- this.idle:
+	select {
+	case c := <-this.idle:
 		ret.Value(c)
 		return
 	case this.busy <- struct{}{}:
@@ -87,20 +87,20 @@ func (this connectionPool) GetConnection() (ret MaybeConnection) {
 		}
 		ret.Value(conn)
 		return
-	case <- time.After(this.timeout):
+	case <-time.After(this.timeout):
 		ret.Error(errors.New("get conn time out"))
 		return
 	}
 }
 
 func (this connectionPool) ReleaseConnection(conn net.Conn) (err maybe.MaybeError) {
-	select{
+	select {
 	case this.idle <- conn:
 		return
-	case <- this.busy:
+	case <-this.busy:
 		conn.Close()
 		return
-	case <- time.After(this.timeout):
+	case <-time.After(this.timeout):
 		err.Error(errors.New("release conn time out"))
 		return
 	}

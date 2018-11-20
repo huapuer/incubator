@@ -1,10 +1,10 @@
 package router
 
 import (
-	"fmt"
 	"../common/maybe"
 	"../config"
 	"../message"
+	"fmt"
 )
 
 var (
@@ -20,8 +20,8 @@ func RegisterRouterPrototype(name string, val Router) (err maybe.MaybeError) {
 	return
 }
 
-func GetRouterPrototype(name string) (ret MaybeRouter){
-	if routerPrototype, ok := routerPrototype[name]; ok{
+func GetRouterPrototype(name string) (ret MaybeRouter) {
+	if routerPrototype, ok := routerPrototype[name]; ok {
 		ret.Value(routerPrototype)
 		return
 	}
@@ -32,7 +32,7 @@ func GetRouterPrototype(name string) (ret MaybeRouter){
 type Router interface {
 	config.IOC
 
-	Route(message.Message) maybe.MaybeError
+	Route(message.RemoteMessage) maybe.MaybeError
 }
 
 type MaybeRouter struct {

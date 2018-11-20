@@ -3,16 +3,16 @@ package host
 import (
 	"../common/maybe"
 	"../config"
-	"../message"
-	"unsafe"
-	"../persistence"
 	"../context"
+	"../message"
+	"../persistence"
 	"../serialization"
 	"fmt"
+	"unsafe"
 )
 
 const (
-	defaultLocalHostClassName  = "actor.defaultLocalHost"
+	defaultLocalHostClassName = "actor.defaultLocalHost"
 )
 
 func init() {
@@ -33,7 +33,7 @@ func (this defaultLocalHost) New(attrs interface{}, cfg config.Config) config.IO
 	//TODO: real logic
 	ret.Value(&defaultLocalHost{
 		commonHost{
-			valid:true,
+			valid: true,
 		},
 	})
 	return ret
@@ -56,21 +56,21 @@ func (this *defaultLocalHost) GetSize() int32 {
 func (this defaultLocalHost) Duplicated() (ret MaybeHost) {
 	ret.Value(&defaultLocalHost{
 		commonHost{
-			id: this.id,
-			valid:true,
+			id:    this.id,
+			valid: true,
 		},
 	})
 	return ret
 }
 
 func (this *defaultLocalHost) FromPersistenceAync(ctx context.HostRecoverContext, space string, layer int32, id int64) {
-	go func(){
+	go func() {
 		select {
 		case <-ctx.Ctx.Done():
 			return
 		}
 		maybe.TryCatch(
-			func(){
+			func() {
 				content := persistence.FromPersistence(space, layer, defaultLocalHostClassName, id).Right()
 				ret := MaybeHost{}
 				new := this.Duplicated().Right()
@@ -79,7 +79,7 @@ func (this *defaultLocalHost) FromPersistenceAync(ctx context.HostRecoverContext
 				ret.Value(new)
 				ctx.Ret <- ret
 			},
-			func(err error){
+			func(err error) {
 				ret := MaybeHost{}
 				ret.Error(err)
 				ctx.Ret <- ret
@@ -98,7 +98,7 @@ func (this *defaultLocalHost) ToPersistence(space string, layer int32) (err mayb
 }
 
 func (this *defaultLocalHost) ToPersistenceAync(ctx context.AyncErrorContext, space string, layer int32) {
-	go func(){
+	go func() {
 		select {
 		case <-ctx.Ctx.Done():
 			return
@@ -113,5 +113,3 @@ func (this *defaultLocalHost) ToPersistenceAync(ctx context.AyncErrorContext, sp
 		ctx.Err <- persistence.ToPersistence(space, layer, defaultLocalHostClassName, this.id, content)
 	}()
 }
-
-

@@ -1,11 +1,11 @@
 package router
 
 import (
-	"fmt"
 	"../actor"
 	"../common/maybe"
 	"../config"
 	"../message"
+	"fmt"
 )
 
 const (
@@ -24,12 +24,12 @@ type defaultRouter struct {
 func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
 	attrsMap, ok := attrs.(map[string]interface{})
-	if !ok{
+	if !ok {
 		ret.Error(fmt.Errorf("illegal cfg type when new router %s", defaultRouterClassName))
 		return ret
 	}
 	actorSchema, ok := attrsMap["ActorSchema"]
-	if !ok{
+	if !ok {
 		ret.Error(fmt.Errorf("no router attribute found: %s", "ActorClass"))
 		return ret
 	}
@@ -39,7 +39,7 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 		return ret
 	}
 	actorNum, ok := attrsMap["ActorNum"]
-	if !ok{
+	if !ok {
 		ret.Error(fmt.Errorf("no router attribute found: %s", "ActorNum"))
 		return ret
 	}
@@ -56,16 +56,16 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	actorAttrs := actorCfg.Attributes
 	if actorAttrs == nil {
-		if !ok{
+		if !ok {
 			ret.Error(fmt.Errorf("no actor attribute found: %d", actorSchemaInt))
 			return ret
 		}
 	}
 	newRouter := &defaultRouter{
-		actorsNum:actorNumInt,
-		actors:make([]actor.Actor,0,0),
+		actorsNum: actorNumInt,
+		actors:    make([]actor.Actor, 0, 0),
 	}
-	for i:=0;i<actorNumInt;i++{
+	for i := 0; i < actorNumInt; i++ {
 		newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right()
 		newRouter.actors = append(newRouter.actors, newActor)
 	}
@@ -73,7 +73,7 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
-func (this defaultRouter) Route(msg message.Message) (err maybe.MaybeError) {
+func (this defaultRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
 	seed := msg.GetHostId().Right()
 	if seed < 0 {
 		err.Error(fmt.Errorf("illegal hash seed: %d", seed))

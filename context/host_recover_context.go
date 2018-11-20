@@ -1,18 +1,18 @@
 package context
 
 import (
-	"context"
 	"../host"
+	"context"
 )
 
-type HostRecoverContext struct{
+type HostRecoverContext struct {
 	context.Context
 
 	Ctx context.Context
 	Ret chan host.MaybeHost
 }
 
-func NewHostRecoverContext() (ret HostRecoverContext, cancel context.CancelFunc){
+func NewHostRecoverContext() (ret HostRecoverContext, cancel context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return HostRecoverContext{
 		Ctx: ctx,
