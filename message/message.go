@@ -71,7 +71,7 @@ type RemoteMessage interface {
 	GetType() int8
 	Master(int8)
 	IsMaster() int8
-	GetHostId() maybe.MaybeInt64
+	GetHostId() int64
 	SetHostId(int64) maybe.MaybeError
 	Duplicate() MaybeRemoteMessage
 }
@@ -109,7 +109,7 @@ func (this *commonMessage) GetLayer() int8 {
 }
 
 func (this *commonMessage) SetLayer(layer int8) (err maybe.MaybeError) {
-	if layer <= 0 {
+	if layer < 0 {
 		err.Error(fmt.Errorf("illegal message layer: %d", layer))
 		return
 	}
@@ -139,13 +139,8 @@ func (this *commonMessage) Master(b int8) {
 	return
 }
 
-func (this *commonMessage) GetHostId() (ret maybe.MaybeInt64) {
-	if this.hostId < 0 {
-		ret.Error(errors.New("hostid less than 0."))
-		return
-	}
-	ret.Value(this.hostId)
-	return
+func (this *commonMessage) GetHostId() int64 {
+	return this.hostId
 }
 
 func (this *commonMessage) SetHostId(hostId int64) (err maybe.MaybeError) {
@@ -163,7 +158,7 @@ func (this commonMessage) copyPaste(msg RemoteMessage) {
 }
 
 type SeesionedMessage interface {
-	Message
+	RemoteMessage
 
 	SetSessionId(int64)
 	GetSesseionId() int64
@@ -206,5 +201,47 @@ func (this commonSessionedMessage) IsToServer() (ret maybe.MaybeBool) {
 		return
 	}
 	ret.Value(this.toServer == SESSEION_MESSAGE_TO_SERVER)
+	return
+}
+
+type EchoMessage interface {
+	SeesionedMessage
+
+	SetSrcLayer(int8) maybe.MaybeError
+	GetSrcLayer() int8
+	GetSrcHostId() maybe.MaybeInt64
+	SetSrcHostId(int64) maybe.MaybeError
+}
+
+type commonEchoMessage struct {
+	commonSessionedMessage
+
+	srcLayer  int8
+	srcHostId int64
+}
+
+func (this *commonEchoMessage) GetSrcLayer() int8 {
+	return this.srcLayer
+}
+
+func (this *commonEchoMessage) SetSrcLayer(layer int8) (err maybe.MaybeError) {
+	if layer < 0 {
+		err.Error(fmt.Errorf("illegal message layer: %d", layer))
+		return
+	}
+	this.srcLayer = layer
+	return
+}
+
+func (this *commonEchoMessage) GetSrcHostId() int64 {
+	return this.srcHostId
+}
+
+func (this *commonEchoMessage) SetSrcHostId(hostId int64) (err maybe.MaybeError) {
+	if hostId < 0 {
+		err.Error(fmt.Errorf("illegal seed: %d", hostId))
+		return
+	}
+	this.srcHostId = hostId
 	return
 }

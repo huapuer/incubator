@@ -93,7 +93,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	this.Routers = make(map[int32]*Router)
 	for _, r := range this.routers {
-		if r.Id <= 0 {
+		if r.Id < 0 {
 			err.Error(fmt.Errorf("illegal router id: %d", r.Id))
 			return
 		}

@@ -74,7 +74,7 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 }
 
 func (this defaultRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
-	seed := msg.GetHostId().Right()
+	seed := msg.GetHostId()
 	if seed < 0 {
 		err.Error(fmt.Errorf("illegal hash seed: %d", seed))
 		return
