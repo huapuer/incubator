@@ -6,8 +6,8 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
-	"github.com/incubator/serialization"
-	"github.com/incubator/context"
+	"../serialization"
+	"../context"
 )
 
 var (
@@ -79,7 +79,7 @@ func (this *commonHost) IsValid() bool {
 	return this.valid
 }
 
-func (this *commonHost) Vaild(v bool) (err maybe.MaybeError) {
+func (this *commonHost) Valid(v bool) {
 	this.valid = v
 	return
 }

@@ -2,7 +2,7 @@ package network
 
 import (
 	"net"
-	"github.com/incubator/common/maybe"
+	"../common/maybe"
 	"errors"
 	"fmt"
 	"time"

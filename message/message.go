@@ -4,16 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"../common/class"
 	"../common/maybe"
-	"../config"
-	"../router"
-	"unsafe"
 	"../topo"
-	"strings"
-	"github.com/incubator/serialization"
-	"github.com/incubator/actor"
-	"github.com/incubator/host"
+	"../serialization"
+	"../actor"
 )
 
 var (
@@ -39,18 +33,18 @@ func GetMessagePrototype(name string) (ret MaybeMessage) {
 }
 
 func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
-	tp := topo.GetTopo(layer).Right()
-	msgCanon := tp.GetMessageCanonicalFromType(typ).Right()
+	tp := topo.GetTopo(int32(layer)).Right()
+	msgCanon := tp.GetMessageCanonicalFromType(int32(typ)).Right()
 	msg := msgCanon.Duplicate().Right()
 	serialization.Unmarshal(data, msg).Test()
-	router := tp.GetRouter(typ).Right()
+	router := tp.GetRouter(int32(typ)).Right()
 	router.Route(msg).Test()
 	return
 }
 
 func Route(m Message) (err maybe.MaybeError) {
-	tp:=topo.GetTopo(m.GetLayer()).Right()
-	router := tp.GetRouter(m.GetType()).Right()
+	tp:=topo.GetTopo(int32(m.GetLayer())).Right()
+	router := tp.GetRouter(int32(m.GetType())).Right()
 	router.Route(m).Test()
 	return
 }
@@ -106,7 +100,7 @@ func (this *commonMessage) Process(ctx context.Context) (err maybe.MaybeError) {
 	return
 }
 
-func (this *commonMessage) GetLayer() int32 {
+func (this *commonMessage) GetLayer() uint8 {
 	return this.layer
 }
 
@@ -119,7 +113,7 @@ func (this *commonMessage) SetLayer(layer uint8) (err maybe.MaybeError) {
 	return
 }
 
-func (this *commonMessage) GetType() int32 {
+func (this *commonMessage) GetType() uint8 {
 	return this.typ
 }
 
@@ -132,7 +126,7 @@ func (this *commonMessage) SetType(typ uint8) (err maybe.MaybeError) {
 	return
 }
 
-func (this *commonMessage) IsMater() bool {
+func (this *commonMessage) IsMaster() bool {
 	return this.master
 }
 

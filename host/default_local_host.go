@@ -5,9 +5,9 @@ import (
 	"../config"
 	"../message"
 	"unsafe"
-	"github.com/incubator/persistence"
-	"github.com/incubator/context"
-	"github.com/incubator/serialization"
+	"../persistence"
+	"../context"
+	"../serialization"
 	"fmt"
 )
 
@@ -39,7 +39,7 @@ func (this defaultLocalHost) New(attrs interface{}, cfg config.Config) config.IO
 	return ret
 }
 
-func (this defaultLocalHost) GetJsonBytes() (ret maybe.MaybeBytes) {
+func (this *defaultLocalHost) GetJsonBytes() (ret maybe.MaybeBytes) {
 	ret.Value([]byte{})
 	return
 }
@@ -49,7 +49,7 @@ func (this *defaultLocalHost) SetJsonField(data []byte) (err maybe.MaybeError) {
 	return
 }
 
-func (this defaultLocalHost) GetSize() int32 {
+func (this *defaultLocalHost) GetSize() int32 {
 	return int32(unsafe.Sizeof(this))
 }
 
@@ -72,9 +72,11 @@ func (this *defaultLocalHost) FromPersistenceAync(ctx context.HostRecoverContext
 		maybe.TryCatch(
 			func(){
 				content := persistence.FromPersistence(space, layer, defaultLocalHostClassName, id).Right()
-				ret := this.Duplicated().Right()
-				serialization.Unmarshal(content, this.Duplicated()).Test()
-				ret.(defaultLocalHost).SetId(id).Test()
+				ret := MaybeHost{}
+				new := this.Duplicated().Right()
+				serialization.Unmarshal(content, new).Test()
+				new.SetId(id).Test()
+				ret.Value(new)
 				ctx.Ret <- ret
 			},
 			func(err error){
@@ -86,7 +88,7 @@ func (this *defaultLocalHost) FromPersistenceAync(ctx context.HostRecoverContext
 	}()
 }
 
-func (this defaultLocalHost) ToPersistence(space string, layer int32) (err maybe.MaybeError) {
+func (this *defaultLocalHost) ToPersistence(space string, layer int32) (err maybe.MaybeError) {
 	if this.id <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", this.id))
 		return
@@ -95,7 +97,7 @@ func (this defaultLocalHost) ToPersistence(space string, layer int32) (err maybe
 	return persistence.ToPersistence(space, layer, defaultLocalHostClassName, this.id, content)
 }
 
-func (this defaultLocalHost) ToPersistenceAync(ctx context.AyncErrorContext, space string, layer int32) {
+func (this *defaultLocalHost) ToPersistenceAync(ctx context.AyncErrorContext, space string, layer int32) {
 	go func(){
 		select {
 		case <-ctx.Ctx.Done():

@@ -1,7 +1,7 @@
 package host
 
 import (
-	"github.com/incubator/common/maybe"
+	"../common/maybe"
 	"../message"
 	"errors"
 )

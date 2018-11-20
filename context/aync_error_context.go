@@ -2,7 +2,7 @@ package context
 
 import (
 	"context"
-	"github.com/incubator/common/maybe"
+	"../common/maybe"
 )
 
 type AyncErrorContext struct {

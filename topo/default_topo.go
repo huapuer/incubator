@@ -7,7 +7,7 @@ import (
 	"../host"
 	c "../context"
 	"context"
-	"github.com/incubator/common/maybe"
+	"../common/maybe"
 )
 
 const (
@@ -32,12 +32,12 @@ type defaultTopo struct {
 }
 
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
-	mod := id%(this.remoteNum + 1)
-	idx := id/(this.remoteNum + 1)/(this.backupFactor + 1)+mod
+	mod := int32(id%(int64(this.remoteNum) + 1))
+	idx := int32(id/int64(this.remoteNum + 1)/int64(this.backupFactor + 1))+mod
 	hosts := make([]host.Host, 0, 0)
 
 	if mod == this.localHostMod {
-		if idx > len(this.localHosts) {
+		if idx > int32(len(this.localHosts)) {
 			ret.Error(fmt.Errorf("master id exceeds local host range: %d", id))
 			return
 		}
@@ -50,13 +50,13 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 		hosts = append(hosts, this.remoteHosts[ridx])
 	}
 	if mod < this.localHostMod + this.backupFactor {
-		if idx > len(this.localHosts) {
+		if idx > int32(len(this.localHosts)) {
 			ret.Error(fmt.Errorf("slave id exceeds local host range: %d", id))
 			return
 		}
 		hosts = append(hosts, this.localHosts[idx])
 	}
-	for offset:=0;offset < this.backupFactor - 1;offset++{
+	for offset:=int32(0);offset < this.backupFactor - 1;offset++{
 		ridx := (mod + offset)% (this.remoteNum + 1)
 		if mod > this.localHostMod {
 			ridx--
@@ -90,7 +90,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	ret := MaybeTopo{}
 	topo := &defaultTopo{
-		commonTopo{
+		commonTopo:commonTopo{
 			layer: cfg.Topo.Layer,
 		},
 		localHosts: make([]host.Host, 0, 0),
@@ -147,7 +147,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("illegal backup factor : %d", localHostModInt))
 		return ret
 	}
-	topo.backupFactor = backupFactor
+	topo.backupFactor = backupFactoInt
 
 
 	localHostSchema, ok := attrsMap["LocalHostSchema"]
@@ -192,14 +192,14 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("attribute RemoteEntries has illegal type(expecting []map[string]string: %+v", remoteEntries))
 		return ret
 	}
-	topo.remoteNum = len(remoteEntriesMap)
+	topo.remoteNum = int32(len(remoteEntriesMap))
 
 	if topo.localHostMod != topo.remoteNum {
 		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localHostMod, topo.remoteNum))
 		return ret
 	}
 
-	for i := 0; i < topo.remoteNum; i++ {
+	for i := int32(0); i < topo.remoteNum; i++ {
 		remoteHostCfg, ok := cfg.Hosts[topo.remoteHostSchema]
 		if !ok {
 			ret.Error(fmt.Errorf("no remote host cfg found: %d", topo.remoteHostSchema))
@@ -217,8 +217,8 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		recoverCtx, recoverCancel = c.NewHostRecoverContext()
 	}
 
-	for i:=0;int64(i)<topo.totalHostNum;i++ {
-		mod := i%(topo.remoteNum + 1)
+	for i:=int64(0);i<topo.totalHostNum;i++ {
+		mod := int32(i)%(topo.remoteNum + 1)
 		if mod >= topo.localHostMod && mod < topo.localHostMod + topo.backupFactor {
 			localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
 			if !ok {
@@ -240,7 +240,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 
 	if this.recover {
-		for _, host := range recoverCtx.Ret {
+		for host := range recoverCtx.Ret {
 			maybe.TryCatch(
 				func(){
 					topo.localHosts = append(topo.localHosts, host.Right())

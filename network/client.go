@@ -3,7 +3,7 @@ package network
 import (
 	"../common/maybe"
 	"../message"
-	"github.com/incubator/config"
+	"../config"
 )
 
 type Client interface {

@@ -7,7 +7,7 @@ import (
 	"../config"
 	"../host"
 	"../message"
-	"github.com/incubator/router"
+	"../router"
 )
 
 var (
@@ -51,9 +51,8 @@ type Topo interface {
 	config.IOC
 
 	Lookup(int64) host.MaybeHost
-	RegisterMessageCanonical(string, message.Message) maybe.MaybeError
 	GetRouter(int32) router.MaybeRouter
-	GetMessageCanonicalFromClass(string) message.MaybeMessage
+	GetMessageFromClass(string) message.MaybeMessage
 	GetMessageCanonicalFromType(int32) message.MaybeMessage
 }
 
@@ -130,8 +129,8 @@ func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError){
 
 		msgPrototype := message.GetMessagePrototype(msgCfg.Class).Right()
 		msgCanon := msgPrototype.Duplicate().Right()
-		msgCanon.SetLayer(this.layer)
-		msgCanon.SetType(msgCfg.Type)
+		msgCanon.SetLayer(uint8(this.layer))
+		msgCanon.SetType(uint8(msgCfg.Type))
 
 		// TODO: deep copy
 		this.messageCanonicalFromType[msgCfg.Type] = msgCanon

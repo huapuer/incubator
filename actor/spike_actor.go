@@ -2,7 +2,6 @@ package actor
 
 import (
 	"context"
-	c "../context"
 	"errors"
 	"../common/maybe"
 	"../config"

@@ -2,7 +2,7 @@ package host
 
 import (
 	"fmt"
-	"github.com/incubator/common/maybe"
+	"../common/maybe"
 	"unsafe"
 	"../network"
 	"errors"
@@ -35,34 +35,34 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 
 	if attrs == nil {
 		ret.Error(fmt.Errorf("attrs is nil when new host: %s", defaultRemoteHostClassName))
-		return
+		return ret
 	}
 	attrsMap, ok := attrs.(map[string]interface{})
 	if !ok {
 		ret.Error(fmt.Errorf("illegal cfg type when new host: %s", defaultRemoteHostClassName))
-		return
+		return ret
 	}
 
 	clientSchema, ok := attrsMap["ClientSchema"]
 	if !ok {
 		ret.Error(errors.New("attribute ClientSchema not found"))
-		return
+		return ret
 	}
 	clientSchemaInt, ok := clientSchema.(int32)
 	if !ok {
 		ret.Error(fmt.Errorf("client schema cfg type error(expecting int): %+v", clientSchema))
-		return
+		return ret
 	}
 
 	clientCfg, ok := cfg.Clients[clientSchemaInt]
 	if !ok {
 		ret.Error(fmt.Errorf("client cfg not found: %d", clientCfg))
-		return
+		return ret
 	}
 
 	//TODO: real logic
 	ret.Value(&defaultRemoteHost{
-		commonHost{
+		commonHost:commonHost{
 			valid:true,
 		},
 		client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),

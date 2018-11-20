@@ -1,7 +1,7 @@
 package persistence
 
 import (
-	"github.com/incubator/common/maybe"
+	"../common/maybe"
 	"errors"
 	"fmt"
 	"os"

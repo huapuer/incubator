@@ -25,7 +25,7 @@ func (this spikeRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	maybe.TryCatch(
 		func(){
 			r := defaultRouter{}.New(attrs, cfg).(MaybeRouter).Right()
-			ret.Value(&spikeRouter{r})
+			ret.Value(&spikeRouter{r.(defaultRouter)})
 		},
 		func(err error){
 			ret.Error(err)

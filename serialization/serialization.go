@@ -1,7 +1,7 @@
 package serialization
 
 import (
-	"github.com/incubator/common/maybe"
+	"../common/maybe"
 	"fmt"
 	"unsafe"
 )
@@ -42,12 +42,12 @@ func Marshal(obj Serializable) (ret []byte) {
 	mi := (*mimicIFace)(unsafe.Pointer(&obj))
 
 	size := obj.GetSize()
-	ms := &mimicSlice{mi.data, size, size}
+	ms := &mimicSlice{mi.data, int(size), int(size)}
 	val := *(*[]byte)(unsafe.Pointer(ms))
 
 	jbytes := obj.GetJsonBytes().Right()
 
-	lth := int32(len(val) + len(jbytes) + 1 + unsafe.Sizeof(int32(0)))
+	lth := int32(len(val) + len(jbytes) + 1 + int(unsafe.Sizeof(int32(0))))
 
 	ret = append(ret, uint8(lth), uint8(len(val)))
 	ret = append(ret, val...)

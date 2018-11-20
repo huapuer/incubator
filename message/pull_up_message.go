@@ -1,14 +1,12 @@
 package message
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"../common/maybe"
 	"../config"
 	"unsafe"
-	"github.com/incubator/actor"
-	"github.com/incubator/host"
+	"../actor"
 )
 
 const (
