@@ -8,6 +8,7 @@ import (
 	"../serialization"
 	"errors"
 	"fmt"
+	"net"
 )
 
 var (
@@ -40,7 +41,7 @@ type Host interface {
 	SetId(int64) maybe.MaybeError
 	Valid(bool)
 	IsValid() bool
-	Receive(message message.Message) maybe.MaybeError
+	Receive(net.Conn, message.RemoteMessage) maybe.MaybeError
 }
 
 type LocalHost interface {

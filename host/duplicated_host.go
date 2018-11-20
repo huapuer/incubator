@@ -2,9 +2,10 @@ package host
 
 import (
 	"../common/maybe"
+	"../config"
 	"../message"
 	"errors"
-	"incubator/config"
+	"net"
 )
 
 type duplicatedHost struct {
@@ -22,18 +23,18 @@ func NewDuplicatedHost(master Host, slaves []Host) (ret MaybeHost) {
 	return
 }
 
-func (this *duplicatedHost) Receive(msg message.Message) (err maybe.MaybeError) {
+func (this *duplicatedHost) Receive(conn net.Conn, msg message.RemoteMessage) (err maybe.MaybeError) {
 	if this.master == nil {
 		err.Error(errors.New("master host not set"))
 		return
 	}
-	this.master.Receive(msg).Test()
+	this.master.Receive(conn, msg).Test()
 	for _, slave := range this.slaves {
 		if slave == nil {
 			err.Error(errors.New("nil slave host found"))
 			return
 		}
-		slave.Receive(msg).Test()
+		slave.Receive(conn, msg).Test()
 	}
 	return
 }

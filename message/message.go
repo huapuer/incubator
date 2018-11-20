@@ -49,11 +49,11 @@ func Route(m RemoteMessage) (err maybe.MaybeError) {
 	return
 }
 
-func SendTo(m Message, topoId int32, hostId int64) (err maybe.MaybeError) {
+func SendTo(m RemoteMessage, topoId int32, hostId int64) (err maybe.MaybeError) {
 	if hostId <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", hostId))
 	}
-	topo.GetTopo(topoId).Right().Lookup(hostId).Right().Receive(m).Test()
+	topo.GetTopo(topoId).Right().Lookup(hostId).Right().Receive(nil, m).Test()
 	return
 }
 

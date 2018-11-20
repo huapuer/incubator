@@ -5,6 +5,7 @@ import (
 	"../config"
 	"../message"
 	"../serialization"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -23,14 +24,19 @@ type peerHost struct {
 	peers map[int64]net.Conn
 }
 
-func (this *peerHost) Receive(msg message.Message) (err maybe.MaybeError) {
+func (this *peerHost) Receive(conn net.Conn, msg message.RemoteMessage) (err maybe.MaybeError) {
 	m, ok := msg.(message.SeesionedMessage)
 	if !ok {
 		err.Error(fmt.Errorf("peer host receiving not sessioned message: %+v", msg))
 		return
 	}
 	if m.IsToServer().Right() {
+		if conn == nil {
+			err.Error(errors.New("peer conn not set"))
+			return
+		}
 		message.Route(m).Test()
+		this.peers[m.GetSesseionId()] = conn
 	} else {
 		peer, ok := this.peers[m.GetSesseionId()]
 		if !ok {
@@ -39,10 +45,13 @@ func (this *peerHost) Receive(msg message.Message) (err maybe.MaybeError) {
 		}
 		_, e := peer.Write(serialization.Marshal(m))
 		if e != nil {
+			delete(this.peers, m.GetSesseionId())
 			err.Error(e)
 			return
 		}
 	}
+	delete(this.peers, m.GetSesseionId())
+	err.Error(nil)
 	return
 }
 
