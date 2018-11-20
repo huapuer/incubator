@@ -47,7 +47,7 @@ func NewConnectionPool(addr string, maxIdle int32, maxBusy int32, timeout time.D
 		return
 	}
 
-	ret.Value(&connectionPool{
+	ret.Value(connectionPool{
 		addr: addr,
 		maxIdle: maxIdle,
 		maxBusy: maxBusy,

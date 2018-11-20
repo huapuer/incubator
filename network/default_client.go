@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const (
+var (
 	DefaultClient = &defaultClient{}
 )
 

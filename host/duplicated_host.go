@@ -4,6 +4,7 @@ import (
 	"../common/maybe"
 	"../message"
 	"errors"
+	"incubator/config"
 )
 
 type duplicatedHost struct{
@@ -26,7 +27,6 @@ func (this *duplicatedHost) Receive(msg message.Message) (err maybe.MaybeError) 
 		err.Error(errors.New("master host not set"))
 		return
 	}
-	msg.SetHostId(this.GetId().Right()).Test()
 	this.master.Receive(msg).Test()
 	for _, slave := range this.slaves {
 		if slave == nil {
@@ -36,6 +36,10 @@ func (this *duplicatedHost) Receive(msg message.Message) (err maybe.MaybeError) 
 		slave.Receive(msg).Test()
 	}
 	return
+}
+
+func (this duplicatedHost) New(attrs interface{}, cfg config.Config) config.IOC {
+	panic("not implemented")
 }
 
 func (this duplicatedHost) GetJsonBytes() (ret maybe.MaybeBytes) {

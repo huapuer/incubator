@@ -157,3 +157,40 @@ func (this commonMessage) copyPaste (msg Message) {
 	msg.SetType(this.typ)
 	msg.SetLayer(this.layer)
 }
+
+type SeesionedMessage interface {
+	Message
+
+	SetSessionId(int64)
+	GetSesseionId() int64
+	ToServer()
+	ToClient()
+	IsToServer() bool
+}
+
+type commonSessionedMessage struct {
+	commonMessage
+
+	toServer maybe.MaybeBool
+	sessionId int64
+}
+
+func (this commonSessionedMessage) GetSessionId() int64 {
+	return this.sessionId
+}
+
+func (this *commonSessionedMessage) SetSessionId(sid int64) {
+	this.sessionId = sid
+}
+
+func (this *commonSessionedMessage) ToServer() {
+	this.toServer.Value(true)
+}
+
+func (this *commonSessionedMessage) ToClient() {
+	this.toServer.Value(false)
+}
+
+func (this commonSessionedMessage) IsToServer() bool {
+	return this.toServer.Right()
+}

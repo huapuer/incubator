@@ -76,6 +76,22 @@ func (this MaybeError) Test() {
 	}
 }
 
+// MaybeBool
+type MaybeBool struct {
+	MaybeError
+	value bool
+}
+
+func (this *MaybeBool) Value(value bool) {
+	this.Error(nil)
+	this.value = value
+}
+
+func (this MaybeBool) Right() bool {
+	this.Test()
+	return this.value
+}
+
 // MaybeInt
 type MaybeInt struct {
 	MaybeError
