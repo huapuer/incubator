@@ -19,6 +19,7 @@ func init() {
 
 type spikeActor struct {
 	commonActor
+	mailBox
 
 	waked bool
 	ctx   context.Context

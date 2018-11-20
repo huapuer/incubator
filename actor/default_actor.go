@@ -18,6 +18,7 @@ func init() {
 
 type defaultActor struct {
 	commonActor
+	mailBox
 }
 
 func (this defaultActor) New(attrs interface{}, cfg config.Config) config.IOC {

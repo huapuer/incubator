@@ -9,7 +9,7 @@ type StateExpireMessage struct {
 	Key string
 }
 
-func (this *StateExpireMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+func (this StateExpireMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 	runner.UnsetState(this.Key).Test()
 	err.Error(nil)
 	return

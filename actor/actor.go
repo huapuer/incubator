@@ -39,7 +39,7 @@ type Actor interface {
 	Receive(message.Message) maybe.MaybeError
 	GetState(string) maybe.MaybeEface
 	UnsetState(string) maybe.MaybeError
-	SetState(string, interface{}, time.Duration) maybe.MaybeError
+	SetState(Actor, string, interface{}, time.Duration) maybe.MaybeError
 }
 
 type MaybeActor struct {
@@ -62,12 +62,11 @@ func (this MaybeActor) Right() Actor {
 }
 
 type commonActor struct {
-	Topo int32
-	mailBox
+	Topo       int32
 	blackBoard map[string]interface{}
 }
 
-func (this *commonActor) SetState(key string, value interface{}, expire time.Duration) (err maybe.MaybeError) {
+func (this *commonActor) SetState(runner Actor, key string, value interface{}, expire time.Duration) (err maybe.MaybeError) {
 	if this.blackBoard == nil {
 		this.blackBoard = make(map[string]interface{})
 	}
@@ -78,7 +77,7 @@ func (this *commonActor) SetState(key string, value interface{}, expire time.Dur
 	this.blackBoard[key] = value
 	go func() {
 		<-time.After(expire)
-		this.mailbox <- &message.StateExpireMessage{key}
+		runner.Receive(message.StateExpireMessage{key})
 	}()
 	err.Error(nil)
 	return
