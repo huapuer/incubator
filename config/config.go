@@ -4,14 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"../common/maybe"
-	"../message"
-	"../router"
 	"../topo"
 	"io/ioutil"
-)
-
-const(
-	SpacePerLayer = 100
 )
 
 type Actor struct {
@@ -65,7 +59,7 @@ type Config struct {
 	Messages map[int32]*Message
 	hosts    []*Host `json:"Hosts"`
 	Hosts    map[int32]*Host
-	clients    []*Host `json:"Clients"`
+	clients    []*Client `json:"Clients"`
 	Clients    map[int32]*Client
 }
 
@@ -141,7 +135,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 		this.Clients[c.Schema] = c
 	}
 
-	topo.SetTopo(this).Test()
+	topo.SetTopo(*this).Test()
 
 	return
 }
