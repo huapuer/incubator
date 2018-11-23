@@ -1,21 +1,23 @@
 package topo
 
 import (
-	"../common/maybe"
 	"../config"
-	c "../context"
 	"../host"
-	"context"
 	"errors"
 	"fmt"
+	"github.com/incubator/persistence"
+	"github.com/incubator/serialization"
+	"github.com/incubator/storage"
 )
 
 const (
-	defaultActorClassName = "actor.defaultActor"
+	defaultTopoClassName = "topo.defaultTopo"
+
+	LocalHostPersistentClass = "LOCALHOST"
 )
 
 func init() {
-	RegisterTopoPrototype(defaultActorClassName, &defaultTopo{})
+	RegisterTopoPrototype(defaultTopoClassName, &defaultTopo{})
 }
 
 type defaultTopo struct {
@@ -26,9 +28,10 @@ type defaultTopo struct {
 	backupFactor     int32
 	localHostSchema  int32
 	remoteHostSchema int32
-	localHosts       []host.Host
+	localHosts       storage.DenseTable
 	remoteHosts      []host.Host
 	remoteNum        int32
+	localHostCanon   host.Host
 }
 
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
@@ -37,20 +40,26 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 	hosts := make([]host.Host, 0, 0)
 
 	if mod == this.localHostMod {
-		if idx > int32(len(this.localHosts)) {
+		if idx > int32(this.localHosts.ElemLen()) {
 			ret.Error(fmt.Errorf("master id exceeds local host range: %d", id))
 			return
 		}
-		hosts = append(hosts, this.localHosts[idx])
+		h := this.localHostCanon
+		ptr := this.localHosts.Get(0, int64(idx)).Right()
+		serialization.Ptr2IFace(&h, ptr)
+		hosts = append(hosts, h)
 	} else {
 		hosts = append(hosts, this.remoteHosts[mod])
 	}
 	if mod < this.localHostMod+this.backupFactor {
-		if idx > int32(len(this.localHosts)) {
+		if idx > int32(this.localHosts.ElemLen()) {
 			ret.Error(fmt.Errorf("slave id exceeds local host range: %d", id))
 			return
 		}
-		hosts = append(hosts, this.localHosts[idx])
+		h := this.localHostCanon
+		ptr := this.localHosts.Get(0, int64(idx)).Right()
+		serialization.Ptr2IFace(&h, ptr)
+		hosts = append(hosts, h)
 	}
 	for offset := int32(0); offset < this.backupFactor-1; offset++ {
 		ridx := (mod + offset) % (this.remoteNum)
@@ -90,12 +99,11 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		commonTopo: commonTopo{
 			layer: cfg.Topo.Layer,
 		},
-		localHosts:  make([]host.Host, 0, 0),
 		remoteHosts: make([]host.Host, 0, 0),
 	}
 	attrsMap, ok := cfg.Topo.Attributes.(map[string]interface{})
 	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new topo %s", defaultActorClassName))
+		ret.Error(fmt.Errorf("illegal cfg type when new topo %s", defaultTopoClassName))
 		return ret
 	}
 	totalHostNum, ok := attrsMap["TotalHostNum"]
@@ -205,47 +213,132 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.remoteHosts, host.GetHostPrototype(remoteHostCfg.Class).Right().(config.IOC).New(remoteHostCfg.Attributes, cfg).(host.MaybeHost).Right())
 	}
 
-	var (
-		recoverCtx    c.HostRecoverContext
-		recoverCancel context.CancelFunc
-	)
-	if this.recover {
-		recoverCtx, recoverCancel = c.NewHostRecoverContext()
+	localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
+	if !ok {
+		ret.Error(fmt.Errorf("no local host cfg found: %d", topo.localHostSchema))
+		return ret
 	}
+	if topo.totalHostNum/int64(topo.remoteNum)*int64(topo.remoteNum) != topo.totalHostNum {
+		ret.Error(fmt.Errorf("total host num is not times of remote num: %d / %d", topo.totalHostNum, topo.remoteNum))
+		return ret
+	}
+	topo.localHostCanon = host.GetHostPrototype(localHostCfg.Class).Right()
 
-	for i := int64(0); i < topo.totalHostNum; i++ {
-		mod := int32(i) % topo.remoteNum
-		if mod >= topo.localHostMod && mod < topo.localHostMod+topo.backupFactor {
-			localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
-			if !ok {
-				ret.Error(fmt.Errorf("no local host cfg found: %d", topo.localHostSchema))
-				return ret
-			}
-			if this.recover {
-				host.GetHostPrototype(localHostCfg.Class).Right().(host.LocalHost).FromPersistenceAsync(
-					recoverCtx,
-					this.space,
-					this.layer,
-					int64(i))
-			} else {
-				localHost := host.GetHostPrototype(localHostCfg.Class).Right().New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
-				localHost.SetId(int64(i))
-				topo.localHosts = append(topo.localHosts, localHost)
-			}
+	localHostAttr := localHostCfg.Attributes
+	if localHostAttr == nil {
+		ret.Error(errors.New("local host attr is nil"))
+		return ret
+	}
+	localHostAttrMap, ok := localHostAttr.(map[string]interface{})
+	if !ok {
+		ret.Error(fmt.Errorf("illegal local host attr type when new topo %s", defaultTopoClassName))
+		return ret
+	}
+	localHostSparseEntries, ok := localHostAttrMap["SparseEnties"]
+	if !ok {
+		ret.Error(errors.New("locao host sparse entry cfg not found"))
+		return ret
+	}
+	localHostSparseEntriesArray, ok := localHostSparseEntries.([]map[string]interface{})
+	if !ok {
+		ret.Error(fmt.Errorf("local host sparse entries cfg type error(expecting []map[stirng]interface{}): %+v", localHostSparseEntries))
+		return ret
+	}
+	entries := make([]*storage.SparseEntry, 0, 0)
+	for i, entryCfg := range localHostSparseEntriesArray {
+		keyTo, ok := entryCfg["KeyTo"]
+		if !ok {
+			ret.Error(fmt.Errorf("sparse entry KeyTo attr not found, index: %d", i))
+			return ret
 		}
+		keyToInt, ok := keyTo.(int64)
+		if !ok {
+			ret.Error(fmt.Errorf("illegal KeyTo type(expecting int64): %v, index: %d", keyTo, i))
+			return ret
+		}
+
+		offset, ok := entryCfg["Offset"]
+		if !ok {
+			ret.Error(fmt.Errorf("sparse entry Offset attr not found, index: %d", i))
+			return ret
+		}
+		offsetInt, ok := offset.(int64)
+		if !ok {
+			ret.Error(fmt.Errorf("illegal Offset type(expecting int64): %v, index: %d", offset, i))
+			return ret
+		}
+
+		size, ok := entryCfg["Size"]
+		if !ok {
+			ret.Error(fmt.Errorf("sparse entry Size attr not found, index: %d", i))
+			return ret
+		}
+		sizeInt, ok := size.(int64)
+		if !ok {
+			ret.Error(fmt.Errorf("illegal Size type(expecting int64): %v, index: %d", size, i))
+			return ret
+		}
+
+		hashDepth, ok := entryCfg["HashDepth"]
+		if !ok {
+			ret.Error(fmt.Errorf("sparse entry HashDepth attr not found, index: %d", i))
+			return ret
+		}
+		hashDepthInt, ok := hashDepth.(int32)
+		if !ok {
+			ret.Error(fmt.Errorf("illegal HashDepth type(expecting int32): %v, index: %d", hashDepth, i))
+			return ret
+		}
+
+		entries = append(entries, &storage.SparseEntry{
+			KeyTo:      keyToInt,
+			Offset:     offsetInt,
+			Size:       sizeInt,
+			HashStride: hashDepthInt,
+		})
+	}
+
+	localHostHashDepth, ok := localHostAttrMap["HashDepth"]
+	if !ok {
+		ret.Error(errors.New("local host HashDepth attr not found"))
+		return ret
+	}
+	localHostHashDepthInt, ok := localHostHashDepth.(int32)
+	if !ok {
+		ret.Error(fmt.Errorf("illegal local host HashDepth attr type(expecting int32): %v", localHostHashDepth))
+		return ret
 	}
 
 	if this.recover {
-		for host := range recoverCtx.Ret {
-			maybe.TryCatch(
-				func() {
-					topo.localHosts = append(topo.localHosts, host.Right())
-				},
-				func(err error) {
-					recoverCancel()
-					ret.Error(err)
-					return
-				})
+		topo.localHosts = storage.NewDenseTable(
+			topo.localHostCanon.(storage.DenseTableElement),
+			1,
+			topo.totalHostNum/int64(topo.remoteNum),
+			entries,
+			topo.localHostCanon.(host.LocalHost).GetSize(),
+			localHostHashDepthInt,
+			persistence.FromPersistence(
+				this.space,
+				this.layer,
+				LocalHostPersistentClass,
+				0).Right()).Right()
+	} else {
+		topo.localHosts = storage.NewDenseTable(
+			topo.localHostCanon.(storage.DenseTableElement),
+			1,
+			topo.totalHostNum/int64(topo.remoteNum),
+			entries,
+			topo.localHostCanon.(host.LocalHost).GetSize(),
+			localHostHashDepthInt,
+			nil).Right()
+
+		for i := int64(0); i < topo.totalHostNum; i++ {
+			mod := int32(i) % topo.remoteNum
+			if mod >= topo.localHostMod && mod < topo.localHostMod+topo.backupFactor {
+				localHost := topo.localHostCanon.New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
+				localHost.SetId(int64(i))
+				topo.localHosts.Put(0, int64(i), serialization.IFace2Ptr(&localHost)).Test()
+			}
 		}
 	}
 

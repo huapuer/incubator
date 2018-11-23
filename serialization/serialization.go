@@ -27,17 +27,7 @@ func (this MaybeSerializable) Right() Serializable {
 	return this.value
 }
 
-type mimicSlice struct {
-	addr *unsafe.ArbitraryType
-	len  int
-	cap  int
-}
-
-type mimicIFace struct {
-	tab  unsafe.Pointer
-	data unsafe.Pointer
-}
-
+//go:noescape
 func Marshal(obj Serializable) (ret []byte) {
 	mi := (*mimicIFace)(unsafe.Pointer(&obj))
 
@@ -58,6 +48,7 @@ func Marshal(obj Serializable) (ret []byte) {
 	return
 }
 
+//go:noescape
 func Unmarshal(data []byte, obj Serializable) (err maybe.MaybeError) {
 	l := len(data)
 	if l < 4 {

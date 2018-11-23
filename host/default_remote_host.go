@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"unsafe"
 )
 
 const (
@@ -70,18 +69,4 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 	})
 	return ret
 	return ret
-}
-
-func (this defaultRemoteHost) GetJsonBytes() (ret maybe.MaybeBytes) {
-	ret.Value([]byte{})
-	return
-}
-
-func (this *defaultRemoteHost) SetJsonField(data []byte) (err maybe.MaybeError) {
-	err.Error(nil)
-	return
-}
-
-func (this defaultRemoteHost) GetSize() int32 {
-	return int32(unsafe.Sizeof(this))
 }

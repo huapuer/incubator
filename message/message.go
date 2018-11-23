@@ -34,8 +34,7 @@ func GetMessagePrototype(name string) (ret MaybeRemoteMessage) {
 
 func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
 	tp := topo.GetTopo(int32(layer)).Right()
-	msgCanon := tp.GetMessageCanonicalFromType(int32(typ)).Right()
-	msg := msgCanon.Duplicate().Right()
+	msg := tp.GetMessageCanonicalFromType(int32(typ)).Right()
 	serialization.Unmarshal(data, msg).Test()
 	router := tp.GetRouter(int32(typ)).Right()
 	router.Route(msg).Test()
@@ -73,7 +72,6 @@ type RemoteMessage interface {
 	IsMaster() int8
 	GetHostId() int64
 	SetHostId(int64) maybe.MaybeError
-	Duplicate() MaybeRemoteMessage
 }
 
 type MaybeRemoteMessage struct {
@@ -150,11 +148,6 @@ func (this *commonMessage) SetHostId(hostId int64) (err maybe.MaybeError) {
 	}
 	this.hostId = hostId
 	return
-}
-
-func (this commonMessage) copyPaste(msg RemoteMessage) {
-	msg.SetType(this.typ)
-	msg.SetLayer(this.layer)
 }
 
 type SeesionedMessage interface {

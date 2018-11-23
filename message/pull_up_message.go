@@ -60,10 +60,3 @@ func (this *pullUpMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
 func (this *pullUpMessage) GetSize() int32 {
 	return int32(unsafe.Sizeof(*this))
 }
-
-func (this *pullUpMessage) Duplicate() (ret MaybeRemoteMessage) {
-	new := &pullUpMessage{}
-	new.copyPaste(new)
-	ret.Value(new)
-	return
-}

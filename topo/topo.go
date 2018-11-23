@@ -128,8 +128,7 @@ func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError) {
 			err.Error(fmt.Errorf("router %d not found when register message type %d", msgCfg.RouterId, msgCfg.Type))
 		}
 
-		msgPrototype := message.GetMessagePrototype(msgCfg.Class).Right()
-		msgCanon := msgPrototype.Duplicate().Right()
+		msgCanon := message.GetMessagePrototype(msgCfg.Class).Right()
 		msgCanon.SetLayer(int8(this.layer))
 		msgCanon.SetType(int8(msgCfg.Type))
 
@@ -153,7 +152,7 @@ func (this commonTopo) GetRouter(id int32) (ret router.MaybeRouter) {
 
 func (this commonTopo) GetMessageFromClass(name string) (ret message.MaybeRemoteMessage) {
 	if val, ok := this.messageCanonicalFromClass[name]; ok {
-		ret.Value(val.Duplicate().Right())
+		ret.Value(val)
 		return
 	}
 	ret.Error(fmt.Errorf("message canonical from class not found: %s", name))

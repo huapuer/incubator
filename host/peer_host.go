@@ -62,15 +62,3 @@ func (this peerHost) New(attrs interface{}, cfg config.Config) config.IOC {
 	})
 	return ret
 }
-
-func (this peerHost) GetJsonBytes() (ret maybe.MaybeBytes) {
-	panic("not implemented")
-}
-
-func (this *peerHost) SetJsonField(data []byte) (err maybe.MaybeError) {
-	panic("not implemented")
-}
-
-func (this peerHost) GetSize() int32 {
-	panic("not implemented")
-}

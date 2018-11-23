@@ -42,15 +42,3 @@ func (this *duplicatedHost) Receive(conn net.Conn, msg message.RemoteMessage) (e
 func (this duplicatedHost) New(attrs interface{}, cfg config.Config) config.IOC {
 	panic("not implemented")
 }
-
-func (this duplicatedHost) GetJsonBytes() (ret maybe.MaybeBytes) {
-	panic("not implemented")
-}
-
-func (this *duplicatedHost) SetJsonField(data []byte) (err maybe.MaybeError) {
-	panic("not implemented")
-}
-
-func (this duplicatedHost) GetSize() int32 {
-	panic("not implemented")
-}

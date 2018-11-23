@@ -3,29 +3,28 @@ package host
 import (
 	"../common/maybe"
 	"../config"
-	"../context"
 	"../message"
-	"../serialization"
 	"errors"
 	"fmt"
+	"github.com/incubator/storage"
 	"net"
 )
 
 var (
-	hostsPrototype = make(map[string]Host)
+	hostPrototypes = make(map[string]Host)
 )
 
 func RegisterHostPrototype(name string, val Host) (err maybe.MaybeError) {
-	if _, ok := hostsPrototype[name]; ok {
+	if _, ok := hostPrototypes[name]; ok {
 		err.Error(fmt.Errorf("host prototype redefined: %s", name))
 		return
 	}
-	hostsPrototype[name] = val
+	hostPrototypes[name] = val
 	return
 }
 
 func GetHostPrototype(name string) (ret MaybeHost) {
-	if prototype, ok := hostsPrototype[name]; ok {
+	if prototype, ok := hostPrototypes[name]; ok {
 		ret.Value(prototype)
 		return
 	}
@@ -35,7 +34,6 @@ func GetHostPrototype(name string) (ret MaybeHost) {
 
 type Host interface {
 	config.IOC
-	serialization.Serializable
 
 	GetId() maybe.MaybeInt64
 	SetId(int64) maybe.MaybeError
@@ -47,10 +45,7 @@ type Host interface {
 type LocalHost interface {
 	Host
 
-	Duplicate() MaybeHost
-	FromPersistenceAsync(context.HostRecoverContext, string, int32, int64)
-	ToPersistence(string, int32) maybe.MaybeError
-	ToPersistenceAsync(context.AyncErrorContext, string, int32)
+	storage.DenseTableElement
 }
 
 type commonHost struct {
