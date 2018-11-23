@@ -1,24 +1,27 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"../common/maybe"
+	"unsafe"
 )
 
-type TableConfig struct {
-	denseSize  int64
-	sparseSize int64
-}
-
-type linkedUintPtr struct {
-	this uintptr
-	next *linkedUintPtr
+type sparseEntry struct {
+	KeyTo  int64
+    Offset int64
+	Size   int64
+	HashStride int32
 }
 
 type denseTable struct {
-	denseTable  []uintptr
-	sparseTable []*linkedUintPtr
+	blocksNum int64
+	blockSize int64
+	denseSize  int64
+	sparseEntries []*sparseEntry
+	data uintptr
+	elementSize int32
+	eraser []byte
+	hashSteps int32
 }
 
 type MaybeDenseTable struct {
@@ -51,126 +54,130 @@ func (this MaybeUintptr) Right() uintptr {
 	return this.value
 }
 
-type MaybeLinkedUintptr struct {
-	maybe.MaybeError
-	value *linkedUintPtr
+type mimicSlice struct {
+	addr *unsafe.ArbitraryType
+	len  int
+	cap  int
 }
 
-func (this MaybeLinkedUintptr) Value(value *linkedUintPtr) {
-	this.Error(nil)
-	this.value = value
-}
-
-func (this MaybeLinkedUintptr) Right() *linkedUintPtr {
-	this.Test()
-	return this.value
-}
-
-func NewDenseTable(config *TableConfig) (this MaybeDenseTable) {
-	if config == nil {
-		this.Error(errors.New("empty config"))
+func NewDenseTable(blocksNum int64, denseSize int64, sparseEntries []*sparseEntry, elementSize int32) (this MaybeDenseTable) {
+	if blocksNum <=0 {
+		this.Error(fmt.Errorf("illegal blocks num: %d", blocksNum))
 		return
 	}
-	if config.denseSize <= 0 || config.sparseSize <= 0 {
-		this.Error(fmt.Errorf("illegal config: denseSize=%d, sparseSize=%d", config.denseSize, config.sparseSize))
+	if elementSize <=0 {
+		this.Error(fmt.Errorf("illegal element size: %d", elementSize))
 		return
 	}
-	this.Value(
-		&denseTable{
-			denseTable:  make([]uintptr, config.denseSize, config.denseSize),
-			sparseTable: make([]*linkedUintPtr, config.sparseSize, config.sparseSize),
-		})
-	return
-}
-
-func (this *denseTable) GetDense(key int64) (ret MaybeUintptr) {
-	if key < 0 || key > int64(len(this.denseTable)) {
-		ret.Error(fmt.Errorf("illegal dense key:%d", key))
+	if denseSize < 0 {
+		this.Error(fmt.Errorf("illegal dense size: %d", denseSize))
 		return
 	}
-	if this.denseTable[key] != 0 {
-		ret.Value(this.denseTable[key])
-	}
-	ret.Error(fmt.Errorf("dense key not found: %d", key))
-	return
-}
-
-func (this *denseTable) PutDense(key int64, value uintptr) (ret maybe.MaybeError) {
-	if key < 0 || key > int64(len(this.denseTable)) {
-		ret.Error(fmt.Errorf("illegal dense key:%d", key))
-		return
-	}
-	this.denseTable[key] = value
-	return
-}
-
-func (this *denseTable) DeleteDense(key int64) (ret maybe.MaybeError) {
-	if key < 0 || key > int64(len(this.denseTable)) {
-		ret.Error(fmt.Errorf("illegal dense key:%d", key))
-		return
-	}
-	this.denseTable[key] = 0
-	return
-}
-
-func (this *denseTable) GetSparse(key int64, compare func(uintptr) bool) (ret MaybeLinkedUintptr) {
-	if key < 0 {
-		ret.Error(fmt.Errorf("illegal sparse key:%d", key))
-		return
-	}
-	first := this.sparseTable[key%int64(len(this.sparseTable))]
-	for {
-		if first == nil {
-			ret.Value(first)
+	blockSize := denseSize
+	currentKeyOffset := int64(0)
+	for _, entry := range sparseEntries {
+		if entry.KeyTo <= currentKeyOffset {
+			this.Error(fmt.Errorf("key-to not in asec order: %d", entry.KeyTo))
 			return
 		}
-		if compare(first.this) {
-			ret.Value(first)
+		if entry.Size <= 0 {
+			this.Error(fmt.Errorf("illegal sparse entry size: %d", entry.Size))
 			return
 		}
-		first = first.next
+		if entry.KeyTo < entry.Size {
+			this.Error(fmt.Errorf("key-to less than size: %d<%d", entry.KeyTo, entry.Size))
+			return
+		}
+		entry.Offset = blockSize
+		blockSize += entry.Size
 	}
+
+	totalSize := blocksNum * blockSize * int64(elementSize)
+	bytes := make([]byte, totalSize, totalSize)
+
+	this.Value(&denseTable{
+		blocksNum:blocksNum,
+		blockSize:blockSize,
+		denseSize:denseSize,
+		sparseEntries:sparseEntries,
+		data: uintptr(unsafe.Pointer((*mimicSlice)(unsafe.Pointer(&bytes)).addr)),
+		elementSize:elementSize,
+		eraser: make([]byte, elementSize, elementSize),
+	})
 	return
 }
 
-func (this *denseTable) PutSparse(key int64, value *linkedUintPtr) (ret maybe.MaybeError) {
-	if key < 0 {
-		ret.Error(fmt.Errorf("illegal sparse key:%d", key))
+func (this *denseTable) Get(block int64, key int64, hit func(element uintptr) bool) (ret MaybeUintptr) {
+	if key < this.denseSize {
+		ptr:= uintptr(block * this.blockSize + int64(this.data) + key*int64(this.elementSize))
+		ret.Value(ptr)
 		return
 	}
-	if value == nil {
-		ret.Error(fmt.Errorf("value is nil: %s", key))
-		return
+	for _, entry := range this.sparseEntries {
+		if key < entry.KeyTo {
+			idx := key % entry.Size
+			for i:=int32(0);i<this.hashSteps;i++ {
+				ptr := uintptr(int64(this.data) + idx)
+				if hit(ptr) {
+					ret.Value(ptr)
+					return
+				}
+				idx += int64(entry.HashStride)
+			}
+		}
 	}
-	value.next = this.sparseTable[key%int64(len(this.sparseTable))]
-	this.sparseTable[key%int64(len(this.sparseTable))] = value
+	ret.Error(fmt.Errorf("key not found: %d", key))
 	return
 }
 
-func (this *denseTable) DeleteSparse(key int64, compare func(uintptr) bool) (ret maybe.MaybeError) {
-	if key < 0 {
-		ret.Error(fmt.Errorf("illegal sparse key:%d", key))
+func (this *denseTable) Put(block int64, key int64, val uintptr, hit func(element uintptr) bool) (err maybe.MaybeError) {
+	if key < this.denseSize {
+		ptr := uintptr(block * this.blockSize + int64(this.data) + key*int64(this.elementSize))
+		src := *(*[]byte)(unsafe.Pointer(&mimicSlice{addr: (*unsafe.ArbitraryType)(val), len: int(this.elementSize)}))
+		copy(*(*[]byte)(unsafe.Pointer(&mimicSlice{addr: (*unsafe.ArbitraryType)(ptr), len: int(this.elementSize)})), src)
+		err.Error(nil)
 		return
 	}
-	first := this.sparseTable[key%int64(len(this.sparseTable))]
-	if first == nil {
-		ret.Error(fmt.Errorf("sparse key not found:%d", key))
-		return
-	}
-	if compare(first.this) {
-		this.sparseTable[key%int64(len(this.sparseTable))] = first.next
-		return
-	}
-	for {
-		if first.next == nil {
-			ret.Error(fmt.Errorf("sparse key not found:%d", key))
-			return
+	for _, entry := range this.sparseEntries {
+		if key < entry.KeyTo {
+			idx := key % entry.Size
+			for i:=int32(0);i<this.hashSteps;i++ {
+				ptr := uintptr(int64(this.data) + idx)
+				if hit(ptr) {
+					src := *(*[]byte)(unsafe.Pointer(&mimicSlice{addr: (*unsafe.ArbitraryType)(val), len: int(this.elementSize)}))
+					copy(*(*[]byte)(unsafe.Pointer(&mimicSlice{addr: (*unsafe.ArbitraryType)(ptr), len: int(this.elementSize)})), src)
+					err.Error(nil)
+					return
+				}
+				idx += int64(entry.HashStride)
+			}
 		}
-		if compare(first.next.this) {
-			first.next = first.next.next
-			return
-		}
-		first = first.next
 	}
+	err.Error(fmt.Errorf("key not found: %d", key))
+	return
+}
+
+func (this *denseTable) Del(block int64, key int64, hit func(element uintptr) bool) (err maybe.MaybeError) {
+	if key < this.denseSize {
+		ptr:=uintptr(block * this.blockSize + int64(this.data) + key*int64(this.elementSize))
+		copy(*(*[]byte)(unsafe.Pointer(&mimicSlice{addr: (*unsafe.ArbitraryType)(ptr), len: int(this.elementSize)})), this.eraser)
+		err.Error(nil)
+		return
+	}
+	for _, entry := range this.sparseEntries {
+		if key < entry.KeyTo {
+			idx := key % entry.Size
+			for i:=int32(0);i<this.hashSteps;i++ {
+				ptr := uintptr(int64(this.data) + idx)
+				if hit(ptr) {
+					copy(*(*[]byte)(unsafe.Pointer(&mimicSlice{addr: (*unsafe.ArbitraryType)(ptr), len: int(this.elementSize)})), this.eraser)
+					err.Error(nil)
+					return
+				}
+				idx += int64(entry.HashStride)
+			}
+		}
+	}
+	err.Error(fmt.Errorf("key not found: %d", key))
 	return
 }
