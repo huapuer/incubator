@@ -5,7 +5,6 @@ import (
 	"../config"
 	"../message"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 )
@@ -39,6 +38,7 @@ type Actor interface {
 	Receive(message.Message) maybe.MaybeError
 	GetState(string) maybe.MaybeEface
 	UnsetState(string) maybe.MaybeError
+	UnsetStateWithToken(string, int64) maybe.MaybeError
 	SetState(Actor, string, interface{}, time.Duration, func(Actor)) maybe.MaybeError
 }
 
@@ -62,49 +62,7 @@ func (this MaybeActor) Right() Actor {
 }
 
 type commonActor struct {
-	Topo       int32
-	blackBoard map[string]interface{}
-}
+	blackBoard
 
-func (this *commonActor) SetState(runner Actor, key string, value interface{}, expire time.Duration, expireFunc func(Actor)) (err maybe.MaybeError) {
-	if this.blackBoard == nil {
-		this.blackBoard = make(map[string]interface{})
-	}
-	if _, ok := this.blackBoard[key]; ok {
-		err.Error(fmt.Errorf("state key already exists: %s", key))
-		return
-	}
-	this.blackBoard[key] = value
-	go func() {
-		<-time.After(expire)
-		runner.Receive(message.StateExpireMessage{
-			key,
-			expireFunc})
-	}()
-	err.Error(nil)
-	return
-}
-
-func (this *commonActor) UnsetState(key string) (err maybe.MaybeError) {
-	if this.blackBoard == nil {
-		err.Error(errors.New("actor blackboard not set"))
-		return
-	}
-	delete(this.blackBoard, key)
-	err.Error(nil)
-	return
-}
-
-func (this commonActor) GetState(key string) (ret maybe.MaybeEface) {
-	if this.blackBoard == nil {
-		ret.Error(errors.New("actor blackboard not set"))
-		return
-	}
-	v, ok := this.blackBoard[key]
-	if !ok {
-		ret.Error(fmt.Errorf("state key does not exists: %s", key))
-		return
-	}
-	ret.Value(v)
-	return
+	Topo int32
 }

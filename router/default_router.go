@@ -73,6 +73,7 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
+//go:noescape
 func (this defaultRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
 	seed := msg.GetHostId()
 	if seed < 0 {

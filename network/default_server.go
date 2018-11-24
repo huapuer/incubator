@@ -1,15 +1,16 @@
 package network
 
 import (
-	"errors"
 	"../common/maybe"
 	"../message"
+	"errors"
 )
 
 type defaultServer struct {
 	commonServer
 }
 
+//go:noescape
 func (this defaultServer) handlePackage(data []byte) (err maybe.MaybeError) {
 	if len(data) <= 2 {
 		err.Error(errors.New("empty package"))
@@ -21,7 +22,7 @@ func (this defaultServer) handlePackage(data []byte) (err maybe.MaybeError) {
 	return
 }
 
-
+//go:noescape
 func (this defaultServer) handleData(data []byte, l int) (err maybe.MaybeError) {
 	if l == 0 {
 		err.Error(errors.New("empty data"))

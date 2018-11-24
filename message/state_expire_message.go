@@ -7,11 +7,12 @@ import (
 
 type StateExpireMessage struct {
 	Key        string
+	Token      int64
 	ExpireFunc func(actor.Actor)
 }
 
 func (this StateExpireMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
-	runner.UnsetState(this.Key).Test()
+	runner.UnsetStateWithToken(this.Key, this.Token).Test()
 	if this.ExpireFunc != nil {
 		this.ExpireFunc(runner)
 	}

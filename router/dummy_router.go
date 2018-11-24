@@ -59,6 +59,7 @@ func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
+//go:noescape
 func (this dummyRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
 	if this.actor == nil {
 		err.Error(errors.New("actor not set"))

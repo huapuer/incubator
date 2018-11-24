@@ -5,8 +5,6 @@ import (
 	"../common/maybe"
 	"../serialization"
 	"../topo"
-	"context"
-	"errors"
 	"fmt"
 )
 
@@ -32,6 +30,7 @@ func GetMessagePrototype(name string) (ret MaybeRemoteMessage) {
 	return
 }
 
+//go:noescape
 func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
 	tp := topo.GetTopo(int32(layer)).Right()
 	msg := tp.GetMessageCanonicalFromType(int32(typ)).Right()
@@ -41,6 +40,7 @@ func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
 	return
 }
 
+//go:noescape
 func Route(m RemoteMessage) (err maybe.MaybeError) {
 	tp := topo.GetTopo(int32(m.GetLayer())).Right()
 	router := tp.GetRouter(int32(m.GetType())).Right()
@@ -72,6 +72,7 @@ type RemoteMessage interface {
 	IsMaster() int8
 	GetHostId() int64
 	SetHostId(int64) maybe.MaybeError
+	Duplicate() MaybeRemoteMessage
 }
 
 type MaybeRemoteMessage struct {
@@ -95,11 +96,6 @@ type commonMessage struct {
 	typ    int8
 	master int8
 	hostId int64
-}
-
-func (this *commonMessage) Process(ctx context.Context) (err maybe.MaybeError) {
-	err.Error(errors.New("calling abstract method:commonMessage.Process()"))
-	return
 }
 
 func (this *commonMessage) GetLayer() int8 {

@@ -104,6 +104,7 @@ func (this *defaultClient) New(attrs interface{}, cfg config.Config) config.IOC 
 	return ret
 }
 
+//go:noescape
 func (this *defaultClient) Send(msg message.RemoteMessage) (err maybe.MaybeError) {
 	_, e := this.pool.GetConnection().Right().Write(serialization.Marshal(msg))
 	if e != nil {

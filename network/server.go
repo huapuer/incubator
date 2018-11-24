@@ -74,6 +74,7 @@ func (this commonServer) handleConnection(server Server, ctx context.Context, c 
 	return
 }
 
+//go:noescape
 func (this commonServer) handlePacakge(server Server, data []byte) (err maybe.MaybeError) {
 	server.handlePackage(data)
 	return
