@@ -1,4 +1,4 @@
-package topo
+package layer
 
 import (
 	"../config"
@@ -12,18 +12,18 @@ import (
 )
 
 const (
-	defaultTopoClassName = "topo.defaultTopo"
+	defaultLayerClassName = "layer.defaultLayer"
 
 	LocalHostPersistentClass = "LOCALHOST"
 	LinkPersistentClass      = "LOCALHOST"
 )
 
 func init() {
-	RegisterTopoPrototype(defaultTopoClassName, &defaultTopo{})
+	RegisterLayerPrototype(defaultLayerClassName, &defaultLayer{})
 }
 
-type defaultTopo struct {
-	commonTopo
+type defaultLayer struct {
+	commonLayer
 
 	totalHostNum     int64
 	localHostMod     int32
@@ -39,7 +39,7 @@ type defaultTopo struct {
 	linkCanon        link.Link
 }
 
-func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
+func (this *defaultLayer) Lookup(id int64) (ret host.MaybeHost) {
 	mod := int32(id % (int64(this.remoteNum)))
 	idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
 	hosts := make([]host.Host, 0, 0)
@@ -92,23 +92,23 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 	return
 }
 
-func (this defaultTopo) GetRemoteHosts() []host.Host {
+func (this defaultLayer) GetRemoteHosts() []host.Host {
 	return this.remoteHosts
 }
 
-func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
+func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
 	this.Init(cfg).Test()
 
-	ret := MaybeTopo{}
-	topo := &defaultTopo{
-		commonTopo: commonTopo{
-			layer: cfg.Topo.Layer,
+	ret := MaybeLayer{}
+	layer := &defaultLayer{
+		commonLayer: commonLayer{
+			layer: cfg.Layer.Id,
 		},
 		remoteHosts: make([]host.Host, 0, 0),
 	}
-	attrsMap, ok := cfg.Topo.Attributes.(map[string]interface{})
+	attrsMap, ok := cfg.Layer.Attributes.(map[string]interface{})
 	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new topo %s", defaultTopoClassName))
+		ret.Error(fmt.Errorf("illegal cfg type when new layer %s", defaultLayerClassName))
 		return ret
 	}
 	totalHostNum, ok := attrsMap["TotalHostNum"]
@@ -125,7 +125,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("illegal total host num : %d", localNumInt))
 		return ret
 	}
-	topo.totalHostNum = localNumInt
+	layer.totalHostNum = localNumInt
 
 	localHostMod, ok := attrsMap["LocalHostMod"]
 	if !ok {
@@ -141,7 +141,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("illegal local host mod : %d", localHostModInt))
 		return ret
 	}
-	topo.localHostMod = localHostModInt
+	layer.localHostMod = localHostModInt
 
 	backupFactor, ok := attrsMap["BackupFactor"]
 	if !ok {
@@ -157,7 +157,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("illegal backup factor : %d", localHostModInt))
 		return ret
 	}
-	topo.backupFactor = backupFactoInt
+	layer.backupFactor = backupFactoInt
 
 	localHostSchema, ok := attrsMap["LocalHostSchema"]
 	if !ok {
@@ -173,7 +173,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("illegal LocalHostSchema: %d", localHostSchemaInt))
 		return ret
 	}
-	topo.localHostSchema = localHostSchemaInt
+	layer.localHostSchema = localHostSchemaInt
 
 	remoteHostSchema, ok := attrsMap["RemoteHostSchema"]
 	if !ok {
@@ -189,7 +189,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("illegal RemoteHostSchema: %d", remoteHostSchema))
 		return ret
 	}
-	topo.remoteHostSchema = remoteHostClassInt
+	layer.remoteHostSchema = remoteHostClassInt
 
 	remoteEntries, ok := attrsMap["RemoteEntries"]
 	if !ok {
@@ -201,41 +201,41 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		ret.Error(fmt.Errorf("attribute RemoteEntries has illegal type(expecting []map[string]string: %+v", remoteEntries))
 		return ret
 	}
-	topo.remoteNum = int32(len(remoteEntriesMap))
+	layer.remoteNum = int32(len(remoteEntriesMap))
 
-	if topo.localHostMod != topo.remoteNum {
-		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localHostMod, topo.remoteNum))
+	if layer.localHostMod != layer.remoteNum {
+		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", layer.localHostMod, layer.remoteNum))
 		return ret
 	}
 
-	for i := int32(0); i < topo.remoteNum; i++ {
-		remoteHostCfg, ok := cfg.Hosts[topo.remoteHostSchema]
+	for i := int32(0); i < layer.remoteNum; i++ {
+		remoteHostCfg, ok := cfg.Hosts[layer.remoteHostSchema]
 		if !ok {
-			ret.Error(fmt.Errorf("no remote host cfg found: %d", topo.remoteHostSchema))
+			ret.Error(fmt.Errorf("no remote host cfg found: %d", layer.remoteHostSchema))
 			return ret
 		}
-		topo.remoteHosts = append(
-			topo.remoteHosts, host.GetHostPrototype(remoteHostCfg.Class).Right().(config.IOC).New(remoteHostCfg.Attributes, cfg).(host.MaybeHost).Right())
+		layer.remoteHosts = append(
+			layer.remoteHosts, host.GetHostPrototype(remoteHostCfg.Class).Right().(config.IOC).New(remoteHostCfg.Attributes, cfg).(host.MaybeHost).Right())
 	}
 
-	localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
+	localHostCfg, ok := cfg.Hosts[layer.localHostSchema]
 	if !ok {
-		ret.Error(fmt.Errorf("no local host cfg found: %d", topo.localHostSchema))
+		ret.Error(fmt.Errorf("no local host cfg found: %d", layer.localHostSchema))
 		return ret
 	}
-	if topo.totalHostNum/int64(topo.remoteNum)*int64(topo.remoteNum) != topo.totalHostNum {
-		ret.Error(fmt.Errorf("total host num is not times of remote num: %d / %d", topo.totalHostNum, topo.remoteNum))
+	if layer.totalHostNum/int64(layer.remoteNum)*int64(layer.remoteNum) != layer.totalHostNum {
+		ret.Error(fmt.Errorf("total host num is not times of remote num: %d / %d", layer.totalHostNum, layer.remoteNum))
 		return ret
 	}
-	topo.localHostCanon = host.GetHostPrototype(localHostCfg.Class).Right()
+	layer.localHostCanon = host.GetHostPrototype(localHostCfg.Class).Right()
 
 	if this.recover {
-		topo.localHosts = storage.NewDenseTable(
-			topo.localHostCanon.(storage.DenseTableElement),
+		layer.localHosts = storage.NewDenseTable(
+			layer.localHostCanon.(storage.DenseTableElement),
 			1,
-			topo.totalHostNum/int64(topo.remoteNum),
+			layer.totalHostNum/int64(layer.remoteNum),
 			[]*storage.SparseEntry{},
-			topo.localHostCanon.(host.LocalHost).GetSize(),
+			layer.localHostCanon.(host.LocalHost).GetSize(),
 			0,
 			persistence.FromPersistence(
 				this.space,
@@ -243,31 +243,31 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 				LocalHostPersistentClass,
 				0).Right()).Right()
 	} else {
-		topo.localHosts = storage.NewDenseTable(
-			topo.localHostCanon.(storage.DenseTableElement),
+		layer.localHosts = storage.NewDenseTable(
+			layer.localHostCanon.(storage.DenseTableElement),
 			1,
-			topo.totalHostNum/int64(topo.remoteNum),
+			layer.totalHostNum/int64(layer.remoteNum),
 			[]*storage.SparseEntry{},
-			topo.localHostCanon.(host.LocalHost).GetSize(),
+			layer.localHostCanon.(host.LocalHost).GetSize(),
 			0,
 			nil).Right()
 
-		for i := int64(0); i < topo.totalHostNum; i++ {
-			mod := int32(i) % topo.remoteNum
-			if mod >= topo.localHostMod && mod < topo.localHostMod+topo.backupFactor {
-				localHost := topo.localHostCanon.New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
+		for i := int64(0); i < layer.totalHostNum; i++ {
+			mod := int32(i) % layer.remoteNum
+			if mod >= layer.localHostMod && mod < layer.localHostMod+layer.backupFactor {
+				localHost := layer.localHostCanon.New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
 				localHost.SetId(int64(i))
-				topo.localHosts.Put(0, int64(i), serialization.IFace2Ptr(&localHost))
+				layer.localHosts.Put(0, int64(i), serialization.IFace2Ptr(&localHost))
 			}
 		}
 	}
 
-	linkCfg, ok := cfg.Links[topo.linkSchema]
+	linkCfg, ok := cfg.Links[layer.linkSchema]
 	if !ok {
-		ret.Error(fmt.Errorf("no link cfg found: %d", topo.localHostSchema))
+		ret.Error(fmt.Errorf("no link cfg found: %d", layer.localHostSchema))
 		return ret
 	}
-	topo.linkCanon = link.GetLinkPrototype(linkCfg.Class).Right()
+	layer.linkCanon = link.GetLinkPrototype(linkCfg.Class).Right()
 
 	linkAttr := linkCfg.Attributes
 	if linkAttr == nil {
@@ -276,7 +276,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	linkAttrMap, ok := linkAttr.(map[string]interface{})
 	if !ok {
-		ret.Error(fmt.Errorf("illegal link attr type when new topo %s", defaultTopoClassName))
+		ret.Error(fmt.Errorf("illegal link attr type when new layer %s", defaultLayerClassName))
 		return ret
 	}
 	linkSparseEntries, ok := linkAttrMap["SparseEnties"]
@@ -366,12 +366,12 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 
 	if this.recover {
-		topo.localHosts = storage.NewDenseTable(
-			topo.localHostCanon.(storage.DenseTableElement),
-			topo.totalHostNum,
-			topo.totalHostNum/int64(topo.remoteNum),
+		layer.localHosts = storage.NewDenseTable(
+			layer.localHostCanon.(storage.DenseTableElement),
+			layer.totalHostNum,
+			layer.totalHostNum/int64(layer.remoteNum),
 			entries,
-			topo.localHostCanon.(host.LocalHost).GetSize(),
+			layer.localHostCanon.(host.LocalHost).GetSize(),
 			linkHashDepthInt,
 			persistence.FromPersistence(
 				this.space,
@@ -379,12 +379,12 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 				LinkPersistentClass,
 				0).Right()).Right()
 	} else {
-		topo.links = storage.NewDenseTable(
-			topo.linkCanon.(storage.DenseTableElement),
-			topo.totalHostNum,
+		layer.links = storage.NewDenseTable(
+			layer.linkCanon.(storage.DenseTableElement),
+			layer.totalHostNum,
 			linkDenseSizeInt,
 			entries,
-			topo.linkCanon.(host.LocalHost).GetSize(),
+			layer.linkCanon.(host.LocalHost).GetSize(),
 			linkHashDepthInt,
 			nil).Right()
 
@@ -393,7 +393,7 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	//TODO: add potential link
 
-	ret.Value(topo)
+	ret.Value(layer)
 	return ret
 }
 

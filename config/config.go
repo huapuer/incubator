@@ -2,7 +2,7 @@ package config
 
 import (
 	"../common/maybe"
-	"../topo"
+	"../layer"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -45,9 +45,9 @@ type Client struct {
 }
 
 type Config struct {
-	Topo struct {
+	Layer struct {
 		Space      string      `json:"Space"`
-		Layer      int32       `json:"Layer"`
+		Id         int32       `json:"Id"`
 		Recover    bool        `json:"Recover"`
 		Class      string      `json:"Topology"`
 		Attributes interface{} `json:"Attributes"`
@@ -56,7 +56,7 @@ type Config struct {
 		//TotalHostNum    int64         `json:"TotalHostNum"`
 		//LocalHostMod int32  `json:"LocalHostMod`
 		//RemoteTable []RemoteEntry `json:"RemoteTable>Entry"`
-	} `json:"Topo"`
+	} `json:"Id"`
 	actors   []*Actor `json:"Actors"`
 	Actors   map[int32]*Actor
 	routers  []*Router `json:"Routers"`
@@ -86,8 +86,8 @@ func init() {
 }
 
 func (this *Config) Process() (err maybe.MaybeError) {
-	if this.Topo.Layer < 0 {
-		err.Error(fmt.Errorf("illegal topo layer: %d", this.Topo.Layer))
+	if this.Layer.Id < 0 {
+		err.Error(fmt.Errorf("illegal layer layer: %d", this.Layer.Id))
 	}
 
 	this.Actors = make(map[int32]*Actor)
@@ -152,7 +152,7 @@ func (this *Config) Process() (err maybe.MaybeError) {
 		this.Clients[c.Schema] = c
 	}
 
-	topo.SetTopo(*this).Test()
+	layer.SetLayer(*this).Test()
 
 	return
 }

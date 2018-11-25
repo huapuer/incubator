@@ -1,4 +1,4 @@
-package topo
+package layer
 
 import (
 	"../common/maybe"
@@ -11,43 +11,43 @@ import (
 )
 
 var (
-	topoPrototype = make(map[string]Topo)
-	topos         = make(map[int32]Topo)
+	layerPrototype = make(map[string]Layer)
+	layers         = make(map[int32]Layer)
 )
 
-func RegisterTopoPrototype(name string, val Topo) (err maybe.MaybeError) {
-	if _, ok := topoPrototype[name]; ok {
-		err.Error(fmt.Errorf("topo prototype redefined: %s", name))
+func RegisterLayerPrototype(name string, val Layer) (err maybe.MaybeError) {
+	if _, ok := layerPrototype[name]; ok {
+		err.Error(fmt.Errorf("layer prototype redefined: %s", name))
 		return
 	}
-	topoPrototype[name] = val
+	layerPrototype[name] = val
 	return
 }
 
-func SetTopo(cfg config.Config) (err maybe.MaybeError) {
-	if _, ok := topos[cfg.Topo.Layer]; ok {
-		err.Error(fmt.Errorf("topo has been set: %d", cfg.Topo.Layer))
+func SetLayer(cfg config.Config) (err maybe.MaybeError) {
+	if _, ok := layers[cfg.Layer.Id]; ok {
+		err.Error(fmt.Errorf("layer has been set: %d", cfg.Layer.Id))
 		return
 	}
-	if prototype, ok := topoPrototype[cfg.Topo.Class]; ok {
-		topo := prototype.New(cfg.Topo.Attributes, cfg).(MaybeTopo).Right()
-		topos[cfg.Topo.Layer] = topo
+	if prototype, ok := layerPrototype[cfg.Layer.Class]; ok {
+		layer := prototype.New(cfg.Layer.Attributes, cfg).(MaybeLayer).Right()
+		layers[cfg.Layer.Id] = layer
 		return
 	}
-	err.Error(fmt.Errorf("topo prototype not found: %s", cfg.Topo.Class))
+	err.Error(fmt.Errorf("layer prototype not found: %s", cfg.Layer.Class))
 	return
 }
 
-func GetTopo(layer int32) (ret MaybeTopo) {
-	if topo, ok := topos[layer]; ok {
-		ret.Value(topo)
+func GetLayer(layer int32) (ret MaybeLayer) {
+	if layer, ok := layers[layer]; ok {
+		ret.Value(layer)
 		return
 	}
-	ret.Error(fmt.Errorf("global topo not found: %d", layer))
+	ret.Error(fmt.Errorf("global layer not found: %d", layer))
 	return
 }
 
-type Topo interface {
+type Layer interface {
 	config.IOC
 
 	Lookup(int64) host.MaybeHost
@@ -57,28 +57,28 @@ type Topo interface {
 	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
 }
 
-type MaybeTopo struct {
+type MaybeLayer struct {
 	config.IOC
 
 	maybe.MaybeError
-	value Topo
+	value Layer
 }
 
-func (this MaybeTopo) New(cfg config.Config) config.IOC {
+func (this MaybeLayer) New(cfg config.Config) config.IOC {
 	panic("not implemented.")
 }
 
-func (this MaybeTopo) Value(value Topo) {
+func (this MaybeLayer) Value(value Layer) {
 	this.Error(nil)
 	this.value = value
 }
 
-func (this MaybeTopo) Right() Topo {
+func (this MaybeLayer) Right() Layer {
 	this.Test()
 	return this.value
 }
 
-type commonTopo struct {
+type commonLayer struct {
 	space                     string
 	layer                     int32
 	recover                   bool
@@ -88,18 +88,18 @@ type commonTopo struct {
 	messageRouters            map[int32]router.Router
 }
 
-func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError) {
-	if cfg.Topo.Layer <= 0 {
-		err.Error(fmt.Errorf("illegal topo layer: %d", cfg.Topo.Layer))
+func (this *commonLayer) Init(cfg config.Config) (err maybe.MaybeError) {
+	if cfg.Layer.Id <= 0 {
+		err.Error(fmt.Errorf("illegal layer layer: %d", cfg.Layer.Id))
 		return
 	}
-	if cfg.Topo.Space == "" {
-		err.Error(errors.New("empty topo space"))
+	if cfg.Layer.Space == "" {
+		err.Error(errors.New("empty layer space"))
 		return
 	}
-	this.layer = cfg.Topo.Layer
-	this.space = cfg.Topo.Space
-	this.recover = cfg.Topo.Recover
+	this.layer = cfg.Layer.Id
+	this.space = cfg.Layer.Space
+	this.recover = cfg.Layer.Recover
 
 	this.messageRouters = make(map[int32]router.Router)
 
@@ -141,7 +141,7 @@ func (this *commonTopo) Init(cfg config.Config) (err maybe.MaybeError) {
 	return
 }
 
-func (this commonTopo) GetRouter(id int32) (ret router.MaybeRouter) {
+func (this commonLayer) GetRouter(id int32) (ret router.MaybeRouter) {
 	if val, ok := this.routers[id]; ok {
 		ret.Value(val)
 		return
@@ -150,7 +150,7 @@ func (this commonTopo) GetRouter(id int32) (ret router.MaybeRouter) {
 	return
 }
 
-func (this commonTopo) GetMessageFromClass(name string) (ret message.MaybeRemoteMessage) {
+func (this commonLayer) GetMessageFromClass(name string) (ret message.MaybeRemoteMessage) {
 	if val, ok := this.messageCanonicalFromClass[name]; ok {
 		ret.Value(val)
 		return
@@ -159,7 +159,7 @@ func (this commonTopo) GetMessageFromClass(name string) (ret message.MaybeRemote
 	return
 }
 
-func (this commonTopo) GetMessageCanonicalFromType(typ int32) (ret message.MaybeRemoteMessage) {
+func (this commonLayer) GetMessageCanonicalFromType(typ int32) (ret message.MaybeRemoteMessage) {
 	if val, ok := this.messageCanonicalFromType[typ]; ok {
 		ret.Value(val)
 		return

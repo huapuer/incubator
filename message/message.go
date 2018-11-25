@@ -3,8 +3,8 @@ package message
 import (
 	"../actor"
 	"../common/maybe"
+	"../layer"
 	"../serialization"
-	"../topo"
 	"fmt"
 )
 
@@ -31,19 +31,19 @@ func GetMessagePrototype(name string) (ret MaybeRemoteMessage) {
 }
 
 //go:noescape
-func RoutePackage(data []byte, layer uint8, typ uint8) (err maybe.MaybeError) {
-	tp := topo.GetTopo(int32(layer)).Right()
-	msg := tp.GetMessageCanonicalFromType(int32(typ)).Right()
+func RoutePackage(data []byte, layerId uint8, typ uint8) (err maybe.MaybeError) {
+	l := layer.GetLayer(int32(layerId)).Right()
+	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
 	serialization.Unmarshal(data, msg).Test()
-	router := tp.GetRouter(int32(typ)).Right()
+	router := l.GetRouter(int32(typ)).Right()
 	router.Route(msg).Test()
 	return
 }
 
 //go:noescape
 func Route(m RemoteMessage) (err maybe.MaybeError) {
-	tp := topo.GetTopo(int32(m.GetLayer())).Right()
-	router := tp.GetRouter(int32(m.GetType())).Right()
+	l := layer.GetLayer(int32(m.GetLayer())).Right()
+	router := l.GetRouter(int32(m.GetType())).Right()
 	router.Route(m).Test()
 	return
 }
@@ -52,7 +52,7 @@ func SendTo(m RemoteMessage, topoId int32, hostId int64) (err maybe.MaybeError) 
 	if hostId <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", hostId))
 	}
-	topo.GetTopo(topoId).Right().Lookup(hostId).Right().Receive(nil, m).Test()
+	layer.GetLayer(topoId).Right().Lookup(hostId).Right().Receive(nil, m).Test()
 	return
 }
 
