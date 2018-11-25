@@ -5,6 +5,7 @@ import (
 	"../host"
 	"errors"
 	"fmt"
+	"github.com/incubator/link"
 	"github.com/incubator/persistence"
 	"github.com/incubator/serialization"
 	"github.com/incubator/storage"
@@ -14,6 +15,7 @@ const (
 	defaultTopoClassName = "topo.defaultTopo"
 
 	LocalHostPersistentClass = "LOCALHOST"
+	LinkPersistentClass      = "LOCALHOST"
 )
 
 func init() {
@@ -27,11 +29,14 @@ type defaultTopo struct {
 	localHostMod     int32
 	backupFactor     int32
 	localHostSchema  int32
+	linkSchema       int32
 	remoteHostSchema int32
 	localHosts       storage.DenseTable
+	links            storage.DenseTable
 	remoteHosts      []host.Host
 	remoteNum        int32
 	localHostCanon   host.Host
+	linkCanon        link.Link
 }
 
 func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
@@ -45,7 +50,7 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 			return
 		}
 		h := this.localHostCanon
-		ptr := this.localHosts.Get(0, int64(idx)).Right()
+		ptr := this.localHosts.Aquire(0, int64(idx)).Right()
 		serialization.Ptr2IFace(&h, ptr)
 		hosts = append(hosts, h)
 	} else {
@@ -57,7 +62,7 @@ func (this *defaultTopo) Lookup(id int64) (ret host.MaybeHost) {
 			return
 		}
 		h := this.localHostCanon
-		ptr := this.localHosts.Get(0, int64(idx)).Right()
+		ptr := this.localHosts.Aquire(0, int64(idx)).Right()
 		serialization.Ptr2IFace(&h, ptr)
 		hosts = append(hosts, h)
 	}
@@ -224,28 +229,68 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	topo.localHostCanon = host.GetHostPrototype(localHostCfg.Class).Right()
 
-	localHostAttr := localHostCfg.Attributes
-	if localHostAttr == nil {
-		ret.Error(errors.New("local host attr is nil"))
+	if this.recover {
+		topo.localHosts = storage.NewDenseTable(
+			topo.localHostCanon.(storage.DenseTableElement),
+			1,
+			topo.totalHostNum/int64(topo.remoteNum),
+			[]*storage.SparseEntry{},
+			topo.localHostCanon.(host.LocalHost).GetSize(),
+			0,
+			persistence.FromPersistence(
+				this.space,
+				this.layer,
+				LocalHostPersistentClass,
+				0).Right()).Right()
+	} else {
+		topo.localHosts = storage.NewDenseTable(
+			topo.localHostCanon.(storage.DenseTableElement),
+			1,
+			topo.totalHostNum/int64(topo.remoteNum),
+			[]*storage.SparseEntry{},
+			topo.localHostCanon.(host.LocalHost).GetSize(),
+			0,
+			nil).Right()
+
+		for i := int64(0); i < topo.totalHostNum; i++ {
+			mod := int32(i) % topo.remoteNum
+			if mod >= topo.localHostMod && mod < topo.localHostMod+topo.backupFactor {
+				localHost := topo.localHostCanon.New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
+				localHost.SetId(int64(i))
+				topo.localHosts.Put(0, int64(i), serialization.IFace2Ptr(&localHost))
+			}
+		}
+	}
+
+	linkCfg, ok := cfg.Links[topo.linkSchema]
+	if !ok {
+		ret.Error(fmt.Errorf("no link cfg found: %d", topo.localHostSchema))
 		return ret
 	}
-	localHostAttrMap, ok := localHostAttr.(map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("illegal local host attr type when new topo %s", defaultTopoClassName))
+	topo.linkCanon = link.GetLinkPrototype(linkCfg.Class).Right()
+
+	linkAttr := linkCfg.Attributes
+	if linkAttr == nil {
+		ret.Error(errors.New("link attr is nil"))
 		return ret
 	}
-	localHostSparseEntries, ok := localHostAttrMap["SparseEnties"]
+	linkAttrMap, ok := linkAttr.(map[string]interface{})
 	if !ok {
-		ret.Error(errors.New("locao host sparse entry cfg not found"))
+		ret.Error(fmt.Errorf("illegal link attr type when new topo %s", defaultTopoClassName))
 		return ret
 	}
-	localHostSparseEntriesArray, ok := localHostSparseEntries.([]map[string]interface{})
+	linkSparseEntries, ok := linkAttrMap["SparseEnties"]
 	if !ok {
-		ret.Error(fmt.Errorf("local host sparse entries cfg type error(expecting []map[stirng]interface{}): %+v", localHostSparseEntries))
+		ret.Error(errors.New("link sparse entry cfg not found"))
+		return ret
+	}
+	linkSparseEntriesArray, ok := linkSparseEntries.([]map[string]interface{})
+	if !ok {
+		ret.Error(fmt.Errorf("link sparse entries cfg type error(expecting []map[stirng]interface{}): %+v", linkSparseEntries))
 		return ret
 	}
 	entries := make([]*storage.SparseEntry, 0, 0)
-	for i, entryCfg := range localHostSparseEntriesArray {
+	for i, entryCfg := range linkSparseEntriesArray {
 		keyTo, ok := entryCfg["KeyTo"]
 		if !ok {
 			ret.Error(fmt.Errorf("sparse entry KeyTo attr not found, index: %d", i))
@@ -298,50 +343,58 @@ func (this *defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		})
 	}
 
-	localHostHashDepth, ok := localHostAttrMap["HashDepth"]
+	linkDenseSize, ok := linkAttrMap["DenseSize"]
 	if !ok {
-		ret.Error(errors.New("local host HashDepth attr not found"))
+		ret.Error(errors.New("link DenseSize attr not found"))
 		return ret
 	}
-	localHostHashDepthInt, ok := localHostHashDepth.(int32)
+	linkDenseSizeInt, ok := linkDenseSize.(int64)
 	if !ok {
-		ret.Error(fmt.Errorf("illegal local host HashDepth attr type(expecting int32): %v", localHostHashDepth))
+		ret.Error(fmt.Errorf("illegal link DenseSize attr type(expecting int64): %v", linkDenseSize))
+		return ret
+	}
+
+	linkHashDepth, ok := linkAttrMap["HashDepth"]
+	if !ok {
+		ret.Error(errors.New("link HashDepth attr not found"))
+		return ret
+	}
+	linkHashDepthInt, ok := linkHashDepth.(int32)
+	if !ok {
+		ret.Error(fmt.Errorf("illegal link HashDepth attr type(expecting int32): %v", linkHashDepth))
 		return ret
 	}
 
 	if this.recover {
 		topo.localHosts = storage.NewDenseTable(
 			topo.localHostCanon.(storage.DenseTableElement),
-			1,
+			topo.totalHostNum,
 			topo.totalHostNum/int64(topo.remoteNum),
 			entries,
 			topo.localHostCanon.(host.LocalHost).GetSize(),
-			localHostHashDepthInt,
+			linkHashDepthInt,
 			persistence.FromPersistence(
 				this.space,
 				this.layer,
-				LocalHostPersistentClass,
+				LinkPersistentClass,
 				0).Right()).Right()
 	} else {
-		topo.localHosts = storage.NewDenseTable(
-			topo.localHostCanon.(storage.DenseTableElement),
-			1,
-			topo.totalHostNum/int64(topo.remoteNum),
+		topo.links = storage.NewDenseTable(
+			topo.linkCanon.(storage.DenseTableElement),
+			topo.totalHostNum,
+			linkDenseSizeInt,
 			entries,
-			topo.localHostCanon.(host.LocalHost).GetSize(),
-			localHostHashDepthInt,
+			topo.linkCanon.(host.LocalHost).GetSize(),
+			linkHashDepthInt,
 			nil).Right()
 
-		for i := int64(0); i < topo.totalHostNum; i++ {
-			mod := int32(i) % topo.remoteNum
-			if mod >= topo.localHostMod && mod < topo.localHostMod+topo.backupFactor {
-				localHost := topo.localHostCanon.New(localHostCfg.Attributes, cfg).(host.MaybeHost).Right()
-				localHost.SetId(int64(i))
-				topo.localHosts.Put(0, int64(i), serialization.IFace2Ptr(&localHost)).Test()
-			}
-		}
+		//TODO: init links
 	}
+
+	//TODO: add potential link
 
 	ret.Value(topo)
 	return ret
 }
+
+//TODO: manage links

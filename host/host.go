@@ -4,7 +4,6 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
-	"errors"
 	"fmt"
 	"github.com/incubator/storage"
 	"net"
@@ -35,49 +34,11 @@ func GetHostPrototype(name string) (ret MaybeHost) {
 type Host interface {
 	config.IOC
 
-	GetId() maybe.MaybeInt64
-	SetId(int64) maybe.MaybeError
+	GetId() int64
+	SetId(int64)
 	Valid(bool)
 	IsValid() bool
 	Receive(net.Conn, message.RemoteMessage) maybe.MaybeError
-}
-
-type LocalHost interface {
-	Host
-
-	storage.DenseTableElement
-}
-
-type commonHost struct {
-	id    int64
-	valid bool
-}
-
-func (this *commonHost) GetId() (id maybe.MaybeInt64) {
-	if this.id < 0 {
-		id.Error(errors.New("hostid less than 0."))
-		return
-	}
-	id.Value(this.id)
-	return
-}
-
-func (this *commonHost) SetId(id int64) (err maybe.MaybeError) {
-	if id < 0 {
-		err.Error(errors.New("hostid less than 0."))
-		return
-	}
-	this.id = id
-	return
-}
-
-func (this *commonHost) IsValid() bool {
-	return this.valid
-}
-
-func (this *commonHost) Valid(v bool) {
-	this.valid = v
-	return
 }
 
 type MaybeHost struct {
@@ -99,4 +60,33 @@ func (this MaybeHost) Right() Host {
 
 func (this MaybeHost) New(cfg config.Config, args ...int32) config.IOC {
 	panic("not implemented.")
+}
+
+type LocalHost interface {
+	Host
+
+	storage.DenseTableElement
+}
+
+type commonHost struct {
+	id    int64
+	valid bool
+}
+
+func (this *commonHost) GetId() int64 {
+	return this.id
+}
+
+func (this *commonHost) SetId(id int64) {
+	this.id = id
+	return
+}
+
+func (this *commonHost) IsValid() bool {
+	return this.valid
+}
+
+func (this *commonHost) Valid(v bool) {
+	this.valid = v
+	return
 }

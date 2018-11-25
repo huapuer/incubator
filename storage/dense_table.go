@@ -9,6 +9,12 @@ import (
 	"unsafe"
 )
 
+const (
+	DENSE_TABLE_ELEMENT_STATE_ONREAD  = -2
+	DENSE_TABLE_ELEMENT_STATE_ONWRITE = -1
+	DENSE_TABLE_ELEMENT_STATE_EMPTY   = 0
+)
+
 type SparseEntry struct {
 	KeyTo      int64
 	Offset     int64
@@ -44,10 +50,12 @@ func (this MaybeDenseTable) Right() DenseTable {
 }
 
 type DenseTableElement interface {
+	GetStatePoint() *int64
 	GetSize() int32
-	IsHit(int64, unsafe.Pointer) bool
-	IsEmpty(unsafe.Pointer) bool
-	Erase(unsafe.Pointer)
+	Aquire(int64, unsafe.Pointer) bool
+	Release(int64, unsafe.Pointer) bool
+	Put(unsafe.Pointer, unsafe.Pointer) bool
+	Erase(int64, unsafe.Pointer) bool
 }
 
 type MaybePointer struct {
@@ -128,7 +136,7 @@ func NewDenseTable(elementCanon DenseTableElement,
 	return
 }
 
-func (this *DenseTable) Get(block int64, key int64) (ret MaybePointer) {
+func (this *DenseTable) Aquire(block int64, key int64) (ret MaybePointer) {
 	if key < this.denseSize {
 		ptr := unsafe.Pointer(uintptr(block*this.blockSize + int64(this.data) + key*int64(this.elementSize)))
 		ret.Value(ptr)
@@ -139,11 +147,14 @@ func (this *DenseTable) Get(block int64, key int64) (ret MaybePointer) {
 			idx := key % entry.Size
 			for i := int32(0); i < this.hashDepth; i++ {
 				ptr := unsafe.Pointer(uintptr(int64(this.data) + idx))
-				if this.elementCanon.IsHit(key, ptr) {
+				if this.elementCanon.Aquire(key, ptr) {
 					ret.Value(ptr)
 					return
 				}
 				idx += int64(entry.HashStride)
+				if idx >= entry.Size {
+					idx %= entry.Size
+				}
 			}
 		}
 	}
@@ -151,59 +162,65 @@ func (this *DenseTable) Get(block int64, key int64) (ret MaybePointer) {
 	return
 }
 
+func (this *DenseTable) Release(key int64, ptr unsafe.Pointer) bool {
+	if key < this.denseSize {
+		return true
+	}
+	return this.elementCanon.Release(key, ptr)
+}
+
 //go:noescape
-func (this *DenseTable) Put(block int64, key int64, val unsafe.Pointer) (err maybe.MaybeError) {
+func (this *DenseTable) Put(block int64, key int64, val unsafe.Pointer) bool {
 	if key < this.denseSize {
 		ptr := unsafe.Pointer(uintptr(block*this.blockSize + int64(this.data) + key*int64(this.elementSize)))
 		serialization.Move(ptr, val, int(this.elementSize))
 		atomic.AddInt64(&this.elemLen, 1)
-		err.Error(nil)
-		return
+		return true
 	}
 	for _, entry := range this.sparseEntries {
 		if key < entry.KeyTo {
 			idx := key % entry.Size
 			for i := int32(0); i < this.hashDepth; i++ {
 				ptr := unsafe.Pointer(uintptr(int64(this.data) + idx))
-				if this.elementCanon.IsEmpty(ptr) {
+				if this.elementCanon.Put(ptr, val) {
 					serialization.Move(ptr, val, int(this.elementSize))
 					atomic.AddInt64(&this.elemLen, 1)
-					err.Error(nil)
-					return
+					return true
 				}
 				idx += int64(entry.HashStride)
+				if idx >= entry.Size {
+					idx %= entry.Size
+				}
 			}
 		}
 	}
-	err.Error(fmt.Errorf("putting key failed: %d", key))
-	return
+	return false
 }
 
-func (this *DenseTable) Del(block int64, key int64) (err maybe.MaybeError) {
+func (this *DenseTable) Del(block int64, key int64) bool {
 	if key < this.denseSize {
 		ptr := unsafe.Pointer(uintptr(block*this.blockSize + int64(this.data) + key*int64(this.elementSize)))
-		this.elementCanon.Erase(ptr)
+		this.elementCanon.Erase(key, ptr)
 		atomic.AddInt64(&this.elemLen, -1)
-		err.Error(nil)
-		return
+		return true
 	}
 	for _, entry := range this.sparseEntries {
 		if key < entry.KeyTo {
 			idx := key % entry.Size
 			for i := int32(0); i < this.hashDepth; i++ {
 				ptr := unsafe.Pointer(uintptr(int64(this.data) + idx))
-				if this.elementCanon.IsHit(key, ptr) {
-					this.elementCanon.Erase(ptr)
+				if this.elementCanon.Erase(key, ptr) {
 					atomic.AddInt64(&this.elemLen, -1)
-					err.Error(nil)
-					return
+					return true
 				}
 				idx += int64(entry.HashStride)
+				if idx >= entry.Size {
+					idx %= entry.Size
+				}
 			}
 		}
 	}
-	err.Error(fmt.Errorf("key not found: %d", key))
-	return
+	return false
 }
 
 func (this DenseTable) BlockLen() int64 {

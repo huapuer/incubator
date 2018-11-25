@@ -61,7 +61,7 @@ func (this *pullUpMessage) GetSize() int32 {
 	return int32(unsafe.Sizeof(*this))
 }
 
-func (this *pullUpMessage) Duplicate() (ret MaybeRemoteMessage) {
+func (this *pullUpMessage) Replicate() (ret MaybeRemoteMessage) {
 	new := *this
 	ret.Value(&new)
 	return

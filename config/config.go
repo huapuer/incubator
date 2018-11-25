@@ -32,6 +32,12 @@ type Host struct {
 	Attributes interface{} `json:"Attributes"`
 }
 
+type Link struct {
+	Schema     int32       `json:"Schema"`
+	Class      string      `json:"Class"`
+	Attributes interface{} `json:"Attributes"`
+}
+
 type Client struct {
 	Schema     int32       `json:"Schema"`
 	Class      string      `json:"Class"`
@@ -59,6 +65,8 @@ type Config struct {
 	Messages map[int32]*Message
 	hosts    []*Host `json:"Hosts"`
 	Hosts    map[int32]*Host
+	links    []*Link `json:"Links"`
+	Links    map[int32]*Link
 	clients  []*Client `json:"Clients"`
 	Clients  map[int32]*Client
 }
@@ -124,6 +132,15 @@ func (this *Config) Process() (err maybe.MaybeError) {
 			return
 		}
 		this.Hosts[h.Schema] = h
+	}
+
+	this.Links = make(map[int32]*Link)
+	for _, l := range this.links {
+		if l.Schema < 0 {
+			err.Error(fmt.Errorf("illegal link schema: %d", h.Schema))
+			return
+		}
+		this.Links[l.Schema] = l
 	}
 
 	this.Clients = make(map[int32]*Client)

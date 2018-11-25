@@ -23,19 +23,9 @@ type MaybeError struct {
 	nonNil bool
 }
 
-func (this *MaybeError) Error(err error) {
-	if err == nil {
-		this.nonNil = true
-	} else {
-		logrus.Errorf("err=%+v", err)
-	}
-}
+func (this *MaybeError) Error(err error) {}
 
-func (this MaybeError) Test() {
-	if this.nonNil == false {
-		logrus.Errorf("err=%+v", NilValueError{"Value not set."})
-	}
-}
+func (this MaybeError) Test() {}
 
 // MaybeBool
 type MaybeBool struct {
