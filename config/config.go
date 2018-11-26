@@ -38,6 +38,12 @@ type Link struct {
 	Attributes interface{} `json:"Attributes"`
 }
 
+type Topo struct {
+	Schema     int32       `json:"Schema"`
+	Class      string      `json:"Class"`
+	Attributes interface{} `json:"Attributes"`
+}
+
 type Client struct {
 	Schema     int32       `json:"Schema"`
 	Class      string      `json:"Class"`
@@ -67,6 +73,8 @@ type Config struct {
 	Hosts    map[int32]*Host
 	links    []*Link `json:"Links"`
 	Links    map[int32]*Link
+	topos    []*Topo `json:"Topos"`
+	Topos    map[int32]*Topo
 	clients  []*Client `json:"Clients"`
 	Clients  map[int32]*Client
 }
@@ -137,10 +145,19 @@ func (this *Config) Process() (err maybe.MaybeError) {
 	this.Links = make(map[int32]*Link)
 	for _, l := range this.links {
 		if l.Schema < 0 {
-			err.Error(fmt.Errorf("illegal link schema: %d", h.Schema))
+			err.Error(fmt.Errorf("illegal link schema: %d", l.Schema))
 			return
 		}
 		this.Links[l.Schema] = l
+	}
+
+	this.Topos = make(map[int32]*Topo)
+	for _, t := range this.topos {
+		if t.Schema < 0 {
+			err.Error(fmt.Errorf("illegal topo schema: %d", t.Schema))
+			return
+		}
+		this.Topos[t.Schema] = t
 	}
 
 	this.Clients = make(map[int32]*Client)

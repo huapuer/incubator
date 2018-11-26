@@ -7,7 +7,6 @@ import (
 	"../serialization"
 	"../storage"
 	"net"
-	"sync/atomic"
 	"unsafe"
 )
 
@@ -23,7 +22,7 @@ type defaultLocalHost struct {
 	commonHost
 }
 
-func (this *defaultLocalHost) Receive(conn net.Conn, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this defaultLocalHost) Receive(conn net.Conn, msg message.RemoteMessage) (err maybe.MaybeError) {
 	message.Route(msg).Test()
 	return
 }
@@ -39,40 +38,24 @@ func (this defaultLocalHost) New(attrs interface{}, cfg config.Config) config.IO
 	return ret
 }
 
-func (this defaultLocalHost) GetStatePoint() *int64 {
-	return &this.id
-}
-
 func (this defaultLocalHost) GetSize() int32 {
 	return int32(unsafe.Sizeof(this))
 }
 
-func (this defaultLocalHost) Aquire(key int64, ptr unsafe.Pointer) bool {
+func (this defaultLocalHost) Get(key int64, ptr unsafe.Pointer) bool {
 	var h LocalHost
 	h = &defaultLocalHost{}
 	serialization.Ptr2IFace(&h, ptr)
-	return atomic.CompareAndSwapInt64(h.GetStatePoint(), key, storage.DENSE_TABLE_ELEMENT_STATE_ONREAD)
-}
-
-func (this defaultLocalHost) Release(key int64, ptr unsafe.Pointer) bool {
-	var h LocalHost
-	h = &defaultLocalHost{}
-	serialization.Ptr2IFace(&h, ptr)
-	return atomic.CompareAndSwapInt64(h.GetStatePoint(), storage.DENSE_TABLE_ELEMENT_STATE_ONREAD, key)
+	return h.GetId() == key
 }
 
 func (this defaultLocalHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
 	var h LocalHost
 	h = &defaultLocalHost{}
 	serialization.Ptr2IFace(&h, dst)
-	if atomic.CompareAndSwapInt64(h.GetStatePoint(), storage.DENSE_TABLE_ELEMENT_STATE_EMPTY, storage.DENSE_TABLE_ELEMENT_STATE_ONWRITE) {
-		var s LocalHost
-		s = &defaultLocalHost{}
-		serialization.Ptr2IFace(&s, src)
-		id := s.GetId()
-		s.SetId(-2)
+	if h.GetId() == storage.DENSE_TABLE_ELEMENT_STATE_EMPTY {
 		serialization.Move(dst, src, int(this.GetSize()))
-		return atomic.CompareAndSwapInt64(h.GetStatePoint(), storage.DENSE_TABLE_ELEMENT_STATE_ONWRITE, id)
+		return true
 	}
 	return false
 }
@@ -81,5 +64,8 @@ func (this defaultLocalHost) Erase(key int64, ptr unsafe.Pointer) bool {
 	var h LocalHost
 	h = &defaultLocalHost{}
 	serialization.Ptr2IFace(&h, ptr)
-	return atomic.CompareAndSwapInt64(h.GetStatePoint(), key, storage.DENSE_TABLE_ELEMENT_STATE_EMPTY)
+	if h.GetId() == key {
+		h.SetId(storage.DENSE_TABLE_ELEMENT_STATE_EMPTY)
+	}
+	return true
 }

@@ -4,8 +4,8 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
-	"fmt"
 	"../storage"
+	"fmt"
 	"net"
 )
 
@@ -73,7 +73,7 @@ type commonHost struct {
 	valid bool
 }
 
-func (this *commonHost) GetId() int64 {
+func (this commonHost) GetId() int64 {
 	return this.id
 }
 
@@ -82,11 +82,31 @@ func (this *commonHost) SetId(id int64) {
 	return
 }
 
-func (this *commonHost) IsValid() bool {
+func (this commonHost) IsValid() bool {
 	return this.valid
 }
 
 func (this *commonHost) Valid(v bool) {
 	this.valid = v
+	return
+}
+
+type LinkHost interface {
+	LocalHost
+
+	SetGuestId(int64)
+	GetGuestId() int64
+}
+
+type commonLinkHost struct {
+	guestId int64
+}
+
+func (this *commonLinkHost) GetGuestId() int64 {
+	return this.guestId
+}
+
+func (this *commonLinkHost) SetGuestId(id int64) {
+	this.guestId = id
 	return
 }

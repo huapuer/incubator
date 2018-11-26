@@ -1,10 +1,10 @@
 package actor
 
 import (
-	"errors"
-	"fmt"
 	"../common/maybe"
 	"../message"
+	"errors"
+	"fmt"
 	"math/rand"
 	"time"
 )

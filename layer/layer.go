@@ -3,11 +3,11 @@ package layer
 import (
 	"../common/maybe"
 	"../config"
-	"../host"
 	"../message"
 	"../router"
 	"errors"
 	"fmt"
+	"github.com/incubator/host"
 )
 
 var (
@@ -50,11 +50,11 @@ func GetLayer(layer int32) (ret MaybeLayer) {
 type Layer interface {
 	config.IOC
 
-	Lookup(int64) host.MaybeHost
-	GetRemoteHosts() []host.Host
 	GetRouter(int32) router.MaybeRouter
 	GetMessageFromClass(string) message.MaybeRemoteMessage
 	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
+	LookupHost(int64) host.MaybeHost
+	LookupLink(int64, int64) host.MaybeHost
 }
 
 type MaybeLayer struct {
@@ -81,14 +81,22 @@ func (this MaybeLayer) Right() Layer {
 type commonLayer struct {
 	space                     string
 	layer                     int32
-	recover                   bool
 	messageCanonicalFromClass map[string]message.RemoteMessage
 	messageCanonicalFromType  map[int32]message.RemoteMessage
 	routers                   map[int32]router.Router
 	messageRouters            map[int32]router.Router
 }
 
-func (this *commonLayer) Init(cfg config.Config) (err maybe.MaybeError) {
+func (this *commonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
+	if cfg.Layer.Space == "" {
+		err.Error(errors.New("layer space not set"))
+		return
+	}
+	if cfg.Layer.Id < 0 {
+		err.Error(fmt.Errorf("illegal layer id: %d", cfg.Layer.Id))
+		return
+	}
+
 	if cfg.Layer.Id <= 0 {
 		err.Error(fmt.Errorf("illegal layer layer: %d", cfg.Layer.Id))
 		return
@@ -99,7 +107,6 @@ func (this *commonLayer) Init(cfg config.Config) (err maybe.MaybeError) {
 	}
 	this.layer = cfg.Layer.Id
 	this.space = cfg.Layer.Space
-	this.recover = cfg.Layer.Recover
 
 	this.messageRouters = make(map[int32]router.Router)
 
@@ -138,6 +145,8 @@ func (this *commonLayer) Init(cfg config.Config) (err maybe.MaybeError) {
 
 		this.messageRouters[msgCfg.Type], _ = this.routers[msgCfg.RouterId]
 	}
+
+	err.Error(nil)
 	return
 }
 

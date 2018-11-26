@@ -48,11 +48,22 @@ func Route(m RemoteMessage) (err maybe.MaybeError) {
 	return
 }
 
-func SendTo(m RemoteMessage, topoId int32, hostId int64) (err maybe.MaybeError) {
+func SendToHost(m RemoteMessage, layerId int32, hostId int64) (err maybe.MaybeError) {
 	if hostId <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", hostId))
 	}
-	layer.GetLayer(topoId).Right().Lookup(hostId).Right().Receive(nil, m).Test()
+	layer.GetLayer(layerId).Right().LookupHost(hostId).Right().Receive(nil, m).Test()
+	return
+}
+
+func SendToLink(m RemoteMessage, layerId int32, hostId int64, guestId int64) (err maybe.MaybeError) {
+	if hostId <= 0 {
+		err.Error(fmt.Errorf("illegal host id: %d", hostId))
+	}
+	if guestId <= 0 {
+		err.Error(fmt.Errorf("illegal guest id: %d", guestId))
+	}
+	layer.GetLayer(layerId).Right().LookupLink(hostId, guestId).Right().Receive(nil, m).Test()
 	return
 }
 
@@ -232,5 +243,25 @@ func (this *commonEchoMessage) SetSrcHostId(hostId int64) (err maybe.MaybeError)
 		return
 	}
 	this.srcHostId = hostId
+	return
+}
+
+type LinkMessage interface {
+	RemoteMessage
+
+	SetGuestId(int64)
+	GetGuestId() int64
+}
+
+type commonLinkMessage struct {
+	guestId int64
+}
+
+func (this *commonLinkMessage) GetGuestId() int64 {
+	return this.guestId
+}
+
+func (this *commonLinkMessage) SetGuestId(id int64) {
+	this.guestId = id
 	return
 }

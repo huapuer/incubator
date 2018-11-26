@@ -2,17 +2,15 @@ package storage
 
 import (
 	"../common/maybe"
+	"../serialization"
 	"errors"
 	"fmt"
-	"../serialization"
 	"sync/atomic"
 	"unsafe"
 )
 
 const (
-	DENSE_TABLE_ELEMENT_STATE_ONREAD  = -2
-	DENSE_TABLE_ELEMENT_STATE_ONWRITE = -1
-	DENSE_TABLE_ELEMENT_STATE_EMPTY   = 0
+	DENSE_TABLE_ELEMENT_STATE_EMPTY = -1
 )
 
 type SparseEntry struct {
@@ -50,10 +48,8 @@ func (this MaybeDenseTable) Right() DenseTable {
 }
 
 type DenseTableElement interface {
-	GetStatePoint() *int64
 	GetSize() int32
-	Aquire(int64, unsafe.Pointer) bool
-	Release(int64, unsafe.Pointer) bool
+	Get(int64, unsafe.Pointer) bool
 	Put(unsafe.Pointer, unsafe.Pointer) bool
 	Erase(int64, unsafe.Pointer) bool
 }
@@ -136,7 +132,7 @@ func NewDenseTable(elementCanon DenseTableElement,
 	return
 }
 
-func (this *DenseTable) Aquire(block int64, key int64) (ret MaybePointer) {
+func (this *DenseTable) Get(block int64, key int64) (ret MaybePointer) {
 	if key < this.denseSize {
 		ptr := unsafe.Pointer(uintptr(block*this.blockSize + int64(this.data) + key*int64(this.elementSize)))
 		ret.Value(ptr)
@@ -147,7 +143,7 @@ func (this *DenseTable) Aquire(block int64, key int64) (ret MaybePointer) {
 			idx := key % entry.Size
 			for i := int32(0); i < this.hashDepth; i++ {
 				ptr := unsafe.Pointer(uintptr(int64(this.data) + idx))
-				if this.elementCanon.Aquire(key, ptr) {
+				if this.elementCanon.Get(key, ptr) {
 					ret.Value(ptr)
 					return
 				}
@@ -160,13 +156,6 @@ func (this *DenseTable) Aquire(block int64, key int64) (ret MaybePointer) {
 	}
 	ret.Error(fmt.Errorf("key not found: %d", key))
 	return
-}
-
-func (this *DenseTable) Release(key int64, ptr unsafe.Pointer) bool {
-	if key < this.denseSize {
-		return true
-	}
-	return this.elementCanon.Release(key, ptr)
 }
 
 //go:noescape
