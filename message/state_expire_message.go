@@ -1,8 +1,8 @@
 package message
 
 import (
-	"github.com/incubator/actor"
-	"github.com/incubator/common/maybe"
+	"../actor"
+	"../common/maybe"
 )
 
 type StateExpireMessage struct {

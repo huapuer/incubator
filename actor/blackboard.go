@@ -3,8 +3,8 @@ package actor
 import (
 	"errors"
 	"fmt"
-	"github.com/incubator/common/maybe"
-	"github.com/incubator/message"
+	"../common/maybe"
+	"../message"
 	"math/rand"
 	"time"
 )

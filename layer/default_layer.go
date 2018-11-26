@@ -5,10 +5,10 @@ import (
 	"../host"
 	"errors"
 	"fmt"
-	"github.com/incubator/link"
-	"github.com/incubator/persistence"
-	"github.com/incubator/serialization"
-	"github.com/incubator/storage"
+	"../link"
+	"../persistence"
+	"../serialization"
+	"../storage"
 )
 
 const (

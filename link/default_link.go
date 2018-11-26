@@ -1,8 +1,8 @@
 package link
 
 import (
-	"github.com/incubator/serialization"
-	"github.com/incubator/storage"
+	"../serialization"
+	"../storage"
 	"sync/atomic"
 	"unsafe"
 )

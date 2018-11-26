@@ -4,7 +4,7 @@ import (
 	"../common/maybe"
 	"errors"
 	"fmt"
-	"github.com/incubator/serialization"
+	"../serialization"
 	"sync/atomic"
 	"unsafe"
 )

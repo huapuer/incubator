@@ -2,9 +2,9 @@ package link
 
 import (
 	"fmt"
-	"github.com/incubator/common/maybe"
-	"github.com/incubator/config"
-	"github.com/incubator/storage"
+	"../common/maybe"
+	"../config"
+	"../storage"
 )
 
 var (

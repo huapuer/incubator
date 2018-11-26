@@ -5,7 +5,7 @@ import (
 	"../config"
 	"../message"
 	"fmt"
-	"github.com/incubator/storage"
+	"../storage"
 	"net"
 )
 
