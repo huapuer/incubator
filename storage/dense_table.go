@@ -212,6 +212,17 @@ func (this *DenseTable) Del(block int64, key int64) bool {
 	return false
 }
 
+func (this *DenseTable) TraverseBlock(block int64, callback func(ptr unsafe.Pointer) bool) {
+	base := block * this.blockSize * int64(this.elementSize)
+	for i := int64(0); i < this.blockSize; i++ {
+		ptr := unsafe.Pointer(uintptr(int64(this.data) + base + i*int64(this.elementSize)))
+		if !callback(ptr) {
+			return
+		}
+	}
+	return
+}
+
 func (this DenseTable) BlockLen() int64 {
 	return this.blockLen
 }

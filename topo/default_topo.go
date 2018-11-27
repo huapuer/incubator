@@ -7,7 +7,9 @@ import (
 	"../storage"
 	"errors"
 	"fmt"
+	"github.com/incubator/common/maybe"
 	"github.com/incubator/persistence"
+	"unsafe"
 )
 
 const (
@@ -23,6 +25,7 @@ func init() {
 
 type defaultTopo struct {
 	totalHostNum     int64
+	linkRadius       int64
 	localHostMod     int32
 	backupFactor     int32
 	localHostSchema  int32
@@ -63,6 +66,22 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		return ret
 	}
 	topo.totalHostNum = localNumInt
+
+	linkRadius, ok := attrsMap["LinkRadius"]
+	if !ok {
+		ret.Error(errors.New("attribute LinkRadius not found"))
+		return ret
+	}
+	linkRadiusInt, ok := linkRadius.(int64)
+	if !ok {
+		ret.Error(fmt.Errorf("link radius cfg type error(expecting int): %+v", linkRadius))
+		return ret
+	}
+	if linkRadiusInt <= 0 {
+		ret.Error(fmt.Errorf("illegal link radius: %d", linkRadiusInt))
+		return ret
+	}
+	topo.linkRadius = linkRadiusInt
 
 	localHostMod, ok := attrsMap["LocalHostMod"]
 	if !ok {
@@ -336,13 +355,14 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 func (this defaultTopo) LookupHost(id int64) (ret host.MaybeHost) {
 	mod := int32(id % (int64(this.remoteNum)))
 	idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
+	if idx > int32(this.localHosts.ElemLen()) {
+		ret.Error(fmt.Errorf("master id exceeds local host range: %d", id))
+		return
+	}
+
 	hosts := make([]host.Host, 0, 0)
 
 	if mod == this.localHostMod {
-		if idx > int32(this.localHosts.ElemLen()) {
-			ret.Error(fmt.Errorf("master id exceeds local host range: %d", id))
-			return
-		}
 		h := this.localHostCanon
 		ptr := this.localHosts.Get(0, int64(idx)).Right()
 		serialization.Ptr2IFace(&h, ptr)
@@ -351,10 +371,6 @@ func (this defaultTopo) LookupHost(id int64) (ret host.MaybeHost) {
 		hosts = append(hosts, this.remoteHosts[mod])
 	}
 	if mod < this.localHostMod+this.backupFactor {
-		if idx > int32(this.localHosts.ElemLen()) {
-			ret.Error(fmt.Errorf("slave id exceeds local host range: %d", id))
-			return
-		}
 		h := this.localHostCanon
 		ptr := this.localHosts.Get(0, int64(idx)).Right()
 		serialization.Ptr2IFace(&h, ptr)
@@ -388,28 +404,33 @@ func (this defaultTopo) LookupHost(id int64) (ret host.MaybeHost) {
 
 func (this defaultTopo) LookupLink(hid int64, gid int64) (ret host.MaybeHost) {
 	mod := int32(hid % (int64(this.remoteNum)))
-	idx := int32(hid/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
+	blk := int32(hid/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
+
+	if blk > int32(this.links.BlockLen()) {
+		ret.Error(fmt.Errorf("master host id exceeds local host range: %d", hid))
+		return
+	}
+
+	idx := gid - hid - 1
+	if idx < -this.linkRadius || idx > this.linkRadius {
+		ret.Error(fmt.Errorf("master link id exceeds link range: %d", idx))
+		return
+	}
+	idx += this.linkRadius
+
 	hosts := make([]host.Host, 0, 0)
 
 	if mod == this.localHostMod {
-		if idx > int32(this.links.BlockLen()) {
-			ret.Error(fmt.Errorf("master host id exceeds local host range: %d", hid))
-			return
-		}
 		h := this.linkCanon
-		ptr := this.localHosts.Get(int64(idx), int64(idx)).Right()
+		ptr := this.localHosts.Get(int64(blk), int64(blk)).Right()
 		serialization.Ptr2IFace(&h, ptr)
 		hosts = append(hosts, h)
 	} else {
 		hosts = append(hosts, this.remoteHosts[mod])
 	}
 	if mod < this.localHostMod+this.backupFactor {
-		if idx > int32(this.links.BlockLen()) {
-			ret.Error(fmt.Errorf("slave host id exceeds local host range: %d", hid))
-			return
-		}
 		h := this.linkCanon
-		ptr := this.localHosts.Get(int64(idx), int64(idx)).Right()
+		ptr := this.localHosts.Get(int64(blk), int64(blk)).Right()
 		serialization.Ptr2IFace(&h, ptr)
 		hosts = append(hosts, h)
 	}
@@ -436,6 +457,25 @@ func (this defaultTopo) LookupLink(hid int64, gid int64) (ret host.MaybeHost) {
 	}
 
 	ret.Value(host.NewDuplicatedHost(master, slaves).Right())
+	return
+}
+
+func (this defaultTopo) TraverseLinksOfHost(hid int64, callback func(ptr unsafe.Pointer) bool) (err maybe.MaybeError) {
+	mod := int32(hid % (int64(this.remoteNum)))
+	if mod == this.localHostMod {
+		blk := int32(hid/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
+		if blk > int32(this.links.BlockLen()) {
+			err.Error(fmt.Errorf("master host id exceeds local host range: %d", hid))
+			return
+		}
+
+		this.links.TraverseBlock(int64(blk), callback)
+	} else {
+		err.Error(fmt.Errorf("host id exceeds local host range: %d", hid))
+		return
+	}
+
+	err.Error(nil)
 	return
 }
 
