@@ -4,8 +4,8 @@ import (
 	"../config"
 	"errors"
 	"fmt"
-	"github.com/incubator/host"
-	"github.com/incubator/topo"
+	"../host"
+	"../topo"
 )
 
 const (

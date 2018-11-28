@@ -5,6 +5,7 @@ import (
 	"../config"
 	"../host"
 	"fmt"
+	"unsafe"
 )
 
 var (
@@ -34,6 +35,7 @@ type Topo interface {
 
 	LookupHost(int64) host.MaybeHost
 	LookupLink(int64, int64) host.MaybeHost
+	TraverseLinksOfHost(int64, func(ptr unsafe.Pointer) bool) maybe.MaybeError
 	GetRemoteHosts() []host.Host
 }
 

@@ -7,7 +7,7 @@ import (
 	"../router"
 	"errors"
 	"fmt"
-	"github.com/incubator/host"
+	"../host"
 )
 
 var (

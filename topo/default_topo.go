@@ -7,8 +7,8 @@ import (
 	"../storage"
 	"errors"
 	"fmt"
-	"github.com/incubator/common/maybe"
-	"github.com/incubator/persistence"
+	"../common/maybe"
+	"../persistence"
 	"unsafe"
 )
 
@@ -349,6 +349,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	//TODO: add potential link
 
+	ret.Value(topo)
 	return ret
 }
 
