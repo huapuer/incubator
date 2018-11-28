@@ -83,7 +83,6 @@ type RemoteMessage interface {
 	IsMaster() int8
 	GetHostId() int64
 	SetHostId(int64) maybe.MaybeError
-	Replicate() MaybeRemoteMessage
 }
 
 type MaybeRemoteMessage struct {

@@ -65,9 +65,3 @@ func (this *GCMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
 func (this *GCMessage) GetSize() int32 {
 	return int32(unsafe.Sizeof(*this))
 }
-
-func (this *GCMessage) Replicate() (ret MaybeRemoteMessage) {
-	new := *this
-	ret.Value(&new)
-	return
-}

@@ -59,9 +59,3 @@ func (this *NodeResultMessage) SetJsonField(data []byte) (err maybe.MaybeError) 
 func (this *NodeResultMessage) GetSize() int32 {
 	return int32(unsafe.Sizeof(*this))
 }
-
-func (this *NodeResultMessage) Replicate() (ret MaybeRemoteMessage) {
-	new := *this
-	ret.Value(&new)
-	return
-}

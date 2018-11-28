@@ -4,10 +4,10 @@ import (
 	"../actor"
 	"../common/maybe"
 	"../config"
-	"../layer"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/incubator/layer"
 	"unsafe"
 )
 
@@ -49,10 +49,11 @@ func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 		return
 	}
 
-	rMsg := layer.GetLayer(int32(this.GetLayer())).
-		Right().GetMessageFromClass(NodeResultMessageClassName).
-		Right().Replicate().
-		Right().(*NodeResultMessage)
+	rMsg := &NodeResultMessage{}
+	rMsg.SetLayer(this.GetLayer())
+
+	l := layer.GetLayer(int32(this.GetLayer())).Right()
+	rMsg.SetType(int8(l.GetMessageType(rMsg).Right()))
 
 	rMsg.SetHostId(this.GetHostId())
 
@@ -90,10 +91,4 @@ func (this *PullUpMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
 
 func (this *PullUpMessage) GetSize() int32 {
 	return int32(unsafe.Sizeof(*this))
-}
-
-func (this *PullUpMessage) Replicate() (ret MaybeRemoteMessage) {
-	new := *this
-	ret.Value(&new)
-	return
 }

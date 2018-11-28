@@ -13,6 +13,11 @@ type mimicIFace struct {
 	data unsafe.Pointer
 }
 
+type mimicEFace struct {
+	_type uintptr
+	data  unsafe.Pointer
+}
+
 //go:noescape
 func Ptr2IFace(iface unsafe.Pointer, ptr unsafe.Pointer) {
 	(*mimicIFace)(iface).data = ptr
@@ -42,4 +47,9 @@ func Move(dst unsafe.Pointer, src unsafe.Pointer, size int) {
 //go:noescape
 func MoveBytes(dst unsafe.Pointer, src []byte, size int) {
 	copy(*(*[]byte)(unsafe.Pointer(&mimicSlice{addr: dst, len: size, cap: size})), src)
+}
+
+//go:noescape
+func Eface2TypeInt(eface interface{}) int {
+	return int((*mimicEFace)(unsafe.Pointer(&eface))._type)
 }

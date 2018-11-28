@@ -8,6 +8,7 @@ import (
 	"../router"
 	"errors"
 	"fmt"
+	"github.com/incubator/serialization"
 	"github.com/incubator/topo"
 )
 
@@ -52,7 +53,7 @@ type Layer interface {
 	config.IOC
 
 	GetRouter(int32) router.MaybeRouter
-	GetMessageFromClass(string) message.MaybeRemoteMessage
+	GetMessageType(interface{}) maybe.MaybeInt32
 	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
 	LookupHost(int64) host.MaybeHost
 	LookupLink(int64, int64) host.MaybeHost
@@ -81,12 +82,12 @@ func (this MaybeLayer) Right() Layer {
 }
 
 type CommonLayer struct {
-	space                     string
-	layer                     int32
-	messageCanonicalFromClass map[string]message.RemoteMessage
-	messageCanonicalFromType  map[int32]message.RemoteMessage
-	routers                   map[int32]router.Router
-	messageRouters            map[int32]router.Router
+	space                    string
+	layer                    int32
+	messageClassToType       map[int]int32
+	messageCanonicalFromType map[int32]message.RemoteMessage
+	routers                  map[int32]router.Router
+	messageRouters           map[int32]router.Router
 }
 
 func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
@@ -121,16 +122,12 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 		this.routers[routerCfg.Id] = routerPrototype
 	}
 
-	this.messageCanonicalFromClass = make(map[string]message.RemoteMessage)
+	this.messageClassToType = make(map[int]int32)
 	this.messageCanonicalFromType = make(map[int32]message.RemoteMessage)
 
 	for _, msgCfg := range cfg.Messages {
 		if _, ok := this.messageCanonicalFromType[msgCfg.Type]; ok {
 			err.Error(fmt.Errorf("message canonical type already exists: %d", msgCfg.Type))
-			return
-		}
-		if _, ok := this.messageCanonicalFromClass[msgCfg.Class]; ok {
-			err.Error(fmt.Errorf("message canonical class already exists: %s", msgCfg.Class))
 			return
 		}
 		if _, ok := this.messageRouters[msgCfg.RouterId]; !ok {
@@ -143,7 +140,6 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 
 		// TODO: deep copy
 		this.messageCanonicalFromType[msgCfg.Type] = msgCanon
-		this.messageCanonicalFromClass[msgCfg.Class] = msgCanon
 
 		this.messageRouters[msgCfg.Type], _ = this.routers[msgCfg.RouterId]
 	}
@@ -161,12 +157,14 @@ func (this CommonLayer) GetRouter(id int32) (ret router.MaybeRouter) {
 	return
 }
 
-func (this CommonLayer) GetMessageFromClass(name string) (ret message.MaybeRemoteMessage) {
-	if val, ok := this.messageCanonicalFromClass[name]; ok {
-		ret.Value(val)
+//go:noescape
+func (this CommonLayer) GetMessageType(msg interface{}) (ret maybe.MaybeInt32) {
+	_type := serialization.Eface2TypeInt(msg)
+	if typ, ok := this.messageClassToType[_type]; ok {
+		ret.Value(typ)
 		return
 	}
-	ret.Error(fmt.Errorf("message canonical from class not found: %s", name))
+	ret.Error(fmt.Errorf("message type from not found: %+v", msg))
 	return
 }
 

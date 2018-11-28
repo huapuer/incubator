@@ -79,9 +79,9 @@ func main() {
 				os.Exit(1)
 			}
 
-			msg := groundLayer.GetMessageFromClass(message.PullUpMessageClassName).
-				Right().Replicate().
-				Right().(*message.PullUpMessage)
+			msg := &message.PullUpMessage{}
+			msg.SetLayer(int8(groudCfg.Layer.Id))
+			msg.SetType(int8(groundLayer.GetMessageType(msg).Right()))
 
 			msg.SetAddr(node.Address)
 			msg.SetCfg(&cfg)
