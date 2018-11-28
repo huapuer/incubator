@@ -4,8 +4,8 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
-	"../storage"
 	"fmt"
+	"github.com/incubator/storage"
 	"net"
 )
 
@@ -33,6 +33,7 @@ func GetHostPrototype(name string) (ret MaybeHost) {
 
 type Host interface {
 	config.IOC
+	storage.DenseTableElement
 
 	GetId() int64
 	SetId(int64)
@@ -62,12 +63,6 @@ func (this MaybeHost) New(cfg config.Config, args ...int32) config.IOC {
 	panic("not implemented.")
 }
 
-type LocalHost interface {
-	Host
-
-	storage.DenseTableElement
-}
-
 type commonHost struct {
 	id    int64
 	valid bool
@@ -89,13 +84,6 @@ func (this commonHost) IsValid() bool {
 func (this *commonHost) Valid(v bool) {
 	this.valid = v
 	return
-}
-
-type LinkHost interface {
-	LocalHost
-
-	SetGuestId(int64)
-	GetGuestId() int64
 }
 
 type commonLinkHost struct {

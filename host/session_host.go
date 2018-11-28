@@ -7,6 +7,7 @@ import (
 	"../serialization"
 	"fmt"
 	"net"
+	"unsafe"
 )
 
 const (
@@ -24,7 +25,7 @@ type defaultSessionHost struct {
 }
 
 func (this *defaultSessionHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
-	m, ok := msg.(message.SeesionedMessage)
+	m, ok := msg.(message.Message)
 	if !ok {
 		err.Error(fmt.Errorf("peer host receiving not sessioned message: %+v", msg))
 		return
@@ -57,4 +58,20 @@ func (this *defaultSessionHost) Replicate() (ret MaybeHost) {
 	new := *this
 	ret.Value(&new)
 	return
+}
+
+func (this defaultSessionHost) GetSize() int32 {
+	panic("not implemented")
+}
+
+func (this defaultSessionHost) Get(key int64, ptr unsafe.Pointer) bool {
+	panic("not implemented")
+}
+
+func (this defaultSessionHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
+	panic("not implemented")
+}
+
+func (this defaultSessionHost) Erase(key int64, ptr unsafe.Pointer) bool {
+	panic("not implemented")
 }

@@ -42,14 +42,14 @@ func (this defaultLinkHost) GetSize() int32 {
 }
 
 func (this defaultLinkHost) Get(key int64, ptr unsafe.Pointer) bool {
-	var h LocalHost
+	var h Host
 	h = &defaultLinkHost{}
 	serialization.Ptr2IFace(&h, ptr)
 	return h.GetId() == key
 }
 
 func (this defaultLinkHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
-	var h LocalHost
+	var h Host
 	h = &defaultLinkHost{}
 	serialization.Ptr2IFace(&h, dst)
 	if h.GetId() == storage.DENSE_TABLE_ELEMENT_STATE_EMPTY {
@@ -60,7 +60,7 @@ func (this defaultLinkHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
 }
 
 func (this defaultLinkHost) Erase(key int64, ptr unsafe.Pointer) bool {
-	var h LocalHost
+	var h Host
 	h = &defaultLinkHost{}
 	serialization.Ptr2IFace(&h, ptr)
 	if h.GetId() == key {

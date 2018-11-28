@@ -2,7 +2,6 @@ package layer
 
 import (
 	"../config"
-	"../host"
 	"../topo"
 	"errors"
 	"fmt"
@@ -62,14 +61,6 @@ func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	ret.Value(layer)
 	return ret
-}
-
-func (this defaultLayer) LookupHost(id int64) host.MaybeHost {
-	return this.topo.LookupHost(id)
-}
-
-func (this defaultLayer) LookupLink(hid int64, gid int64) host.MaybeHost {
-	return this.topo.LookupLink(hid, gid)
 }
 
 func (this defaultLayer) GetTopo() topo.Topo {

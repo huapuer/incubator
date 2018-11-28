@@ -52,7 +52,7 @@ func SendToHost(m RemoteMessage, layerId int32, hostId int64) (err maybe.MaybeEr
 	if hostId <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", hostId))
 	}
-	layer.GetLayer(layerId).Right().LookupHost(hostId).Right().Receive(m).Test()
+	layer.GetLayer(layerId).Right().GetTopo().SendToHost(hostId, m).Test()
 	return
 }
 
@@ -63,7 +63,7 @@ func SendToLink(m RemoteMessage, layerId int32, hostId int64, guestId int64) (er
 	if guestId <= 0 {
 		err.Error(fmt.Errorf("illegal guest id: %d", guestId))
 	}
-	layer.GetLayer(layerId).Right().LookupLink(hostId, guestId).Right().Receive(m).Test()
+	layer.GetLayer(layerId).Right().GetTopo().SendToLink(hostId, guestId, m).Test()
 	return
 }
 
@@ -100,6 +100,11 @@ func (this MaybeRemoteMessage) Right() RemoteMessage {
 	this.Test()
 	return this.value
 }
+
+const (
+	MASTER_NO = iota
+	MASTER_YES
+)
 
 type commonMessage struct {
 	layerId int8

@@ -7,6 +7,7 @@ import (
 	"../network"
 	"errors"
 	"fmt"
+	"unsafe"
 )
 
 const (
@@ -68,4 +69,20 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 	})
 	return ret
 	return ret
+}
+
+func (this defaultRemoteHost) GetSize() int32 {
+	panic("not implemented")
+}
+
+func (this defaultRemoteHost) Get(key int64, ptr unsafe.Pointer) bool {
+	panic("not implemented")
+}
+
+func (this defaultRemoteHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
+	panic("not implemented")
+}
+
+func (this defaultRemoteHost) Erase(key int64, ptr unsafe.Pointer) bool {
+	panic("not implemented")
 }

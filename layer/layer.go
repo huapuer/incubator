@@ -3,7 +3,6 @@ package layer
 import (
 	"../common/maybe"
 	"../config"
-	"../host"
 	"../message"
 	"../router"
 	"errors"
@@ -55,8 +54,6 @@ type Layer interface {
 	GetRouter(int32) router.MaybeRouter
 	GetMessageType(interface{}) maybe.MaybeInt32
 	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
-	LookupHost(int64) host.MaybeHost
-	LookupLink(int64, int64) host.MaybeHost
 	GetTopo() topo.Topo
 }
 

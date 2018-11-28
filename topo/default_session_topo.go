@@ -6,6 +6,7 @@ import (
 	"../host"
 	"errors"
 	"fmt"
+	"github.com/incubator/message"
 	"net"
 	"unsafe"
 )
@@ -76,17 +77,20 @@ func (this *defaultSessionTopo) AddHost(id int64, conn net.Conn) (err maybe.Mayb
 	return
 }
 
-func (this defaultSessionTopo) LookupHost(id int64) (ret host.MaybeHost) {
+func (this defaultSessionTopo) SendToHost(id int64, msg message.RemoteMessage) (err maybe.MaybeError) {
 	host, ok := this.hosts[id]
 	if !ok {
-		ret.Error(fmt.Errorf("no host found: %d", id))
+		err.Error(fmt.Errorf("no host found: %d", id))
 		return
 	}
-	ret.Value(host)
+
+	host.Receive(msg).Test()
+
+	err.Error(nil)
 	return
 }
 
-func (this defaultSessionTopo) LookupLink(hid int64, gid int64) (ret host.MaybeHost) {
+func (this defaultSessionTopo) SendToLink(hid int64, gid int64, msg message.RemoteMessage) (err maybe.MaybeError) {
 	panic("not implemented")
 }
 

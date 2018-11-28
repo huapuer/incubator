@@ -5,6 +5,7 @@ import (
 	"../config"
 	"../host"
 	"fmt"
+	"github.com/incubator/message"
 	"net"
 	"unsafe"
 )
@@ -34,8 +35,8 @@ func GetTopoPrototype(name string) (ret MaybeTopo) {
 type Topo interface {
 	config.IOC
 
-	LookupHost(int64) host.MaybeHost
-	LookupLink(int64, int64) host.MaybeHost
+	SendToHost(int64, message.RemoteMessage) maybe.MaybeError
+	SendToLink(int64, int64, message.RemoteMessage) maybe.MaybeError
 	TraverseLinksOfHost(int64, func(ptr unsafe.Pointer) bool) maybe.MaybeError
 	GetRemoteHosts() []host.Host
 }

@@ -9,6 +9,7 @@ import (
 	"../storage"
 	"errors"
 	"fmt"
+	"github.com/incubator/message"
 	"unsafe"
 )
 
@@ -17,6 +18,8 @@ const (
 
 	LocalHostPersistentClass = "LOCALHOST"
 	LinkPersistentClass      = "LINK"
+
+	HostSlotSize = 10
 )
 
 func init() {
@@ -191,7 +194,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			1,
 			topo.totalHostNum/int64(topo.remoteNum),
 			[]*storage.SparseEntry{},
-			topo.localHostCanon.(host.LocalHost).GetSize(),
+			topo.localHostCanon.(host.Host).GetSize(),
 			0,
 			persistence.FromPersistence(
 				cfg.Layer.Space,
@@ -204,7 +207,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			1,
 			topo.totalHostNum/int64(topo.remoteNum),
 			[]*storage.SparseEntry{},
-			topo.localHostCanon.(host.LocalHost).GetSize(),
+			topo.localHostCanon.(host.Host).GetSize(),
 			0,
 			nil).Right()
 
@@ -327,7 +330,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.totalHostNum*int64(topo.backupFactor),
 			topo.totalHostNum/int64(topo.remoteNum),
 			entries,
-			topo.localHostCanon.(host.LocalHost).GetSize(),
+			topo.localHostCanon.(host.Host).GetSize(),
 			linkHashDepthInt,
 			persistence.FromPersistence(
 				cfg.Layer.Space,
@@ -340,7 +343,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.totalHostNum*int64(topo.backupFactor),
 			linkDenseSizeInt,
 			entries,
-			topo.linkCanon.(host.LocalHost).GetSize(),
+			topo.linkCanon.(host.Host).GetSize(),
 			linkHashDepthInt,
 			nil).Right()
 
@@ -353,15 +356,16 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
-func (this defaultTopo) LookupHost(id int64) (ret host.MaybeHost) {
+//go:noescape
+func (this defaultTopo) SendToHost(id int64, msg message.RemoteMessage) (err maybe.MaybeError) {
 	mod := int32(id % (int64(this.remoteNum)))
 	idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
 	if idx > int32(this.localHosts.ElemLen()) {
-		ret.Error(fmt.Errorf("master id exceeds local host range: %d", id))
+		err.Error(fmt.Errorf("master id exceeds local host range: %d", id))
 		return
 	}
 
-	hosts := make([]host.Host, 0, 0)
+	hosts := make([]host.Host, HostSlotSize, 0)
 
 	if mod == this.localHostMod {
 		h := this.localHostCanon
@@ -382,48 +386,50 @@ func (this defaultTopo) LookupHost(id int64) (ret host.MaybeHost) {
 		hosts = append(hosts, this.remoteHosts[ridx])
 	}
 
-	var master host.Host
-	slaves := make([]host.Host, 0, 0)
+	masterSended := false
 	for _, h := range hosts {
 		if h.IsValid() {
-			if master == nil {
-				master = h
+			if !masterSended {
+				msg.Master(message.MASTER_YES)
+				masterSended = true
 			} else {
-				slaves = append(slaves, h)
+				msg.Master(message.MASTER_NO)
 			}
+			h.Receive(msg).Test()
 		}
 	}
 
-	if master == nil {
-		ret.Error(fmt.Errorf("no available master host found for id: %d", id))
+	if !masterSended {
+		err.Error(fmt.Errorf("no available master host found for id: %d", id))
 		return
 	}
 
-	ret.Value(host.NewDuplicatedHost(master, slaves).Right())
+	err.Error(nil)
 	return
 }
 
-func (this defaultTopo) LookupLink(hid int64, gid int64) (ret host.MaybeHost) {
+//go:noescape
+func (this defaultTopo) SendToLink(hid int64, gid int64, msg message.RemoteMessage) (err maybe.MaybeError) {
 	mod := int32(hid % (int64(this.remoteNum)))
 	blk := int32(hid/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
 
 	if blk > int32(this.links.BlockLen()) {
-		ret.Error(fmt.Errorf("master host id exceeds local host range: %d", hid))
+		err.Error(fmt.Errorf("master host id exceeds local host range: %d", hid))
 		return
 	}
 
 	idx := gid - hid - 1
 	if idx < -this.linkRadius || idx > this.linkRadius {
-		ret.Error(fmt.Errorf("master link id exceeds link range: %d", idx))
+		err.Error(fmt.Errorf("master link id exceeds link range: %d", idx))
 		return
 	}
 	idx += this.linkRadius
 
-	hosts := make([]host.Host, 0, 0)
+	hosts := make([]host.Host, HostSlotSize, 0)
 
 	if mod == this.localHostMod {
 		h := this.linkCanon
-		ptr := this.localHosts.Get(int64(blk), int64(blk)).Right()
+		ptr := this.links.Get(int64(blk), int64(blk)).Right()
 		serialization.Ptr2IFace(&h, ptr)
 		hosts = append(hosts, h)
 	} else {
@@ -431,7 +437,7 @@ func (this defaultTopo) LookupLink(hid int64, gid int64) (ret host.MaybeHost) {
 	}
 	if mod < this.localHostMod+this.backupFactor {
 		h := this.linkCanon
-		ptr := this.localHosts.Get(int64(blk), int64(blk)).Right()
+		ptr := this.links.Get(int64(blk), int64(blk)).Right()
 		serialization.Ptr2IFace(&h, ptr)
 		hosts = append(hosts, h)
 	}
@@ -440,24 +446,25 @@ func (this defaultTopo) LookupLink(hid int64, gid int64) (ret host.MaybeHost) {
 		hosts = append(hosts, this.remoteHosts[ridx])
 	}
 
-	var master host.Host
-	slaves := make([]host.Host, 0, 0)
+	masterSended := false
 	for _, h := range hosts {
 		if h.IsValid() {
-			if master == nil {
-				master = h
+			if !masterSended {
+				msg.Master(message.MASTER_YES)
+				masterSended = true
 			} else {
-				slaves = append(slaves, h)
+				msg.Master(message.MASTER_NO)
 			}
+			h.Receive(msg).Test()
 		}
 	}
 
-	if master == nil {
-		ret.Error(fmt.Errorf("no available master link found for id: %d->%d", hid, gid))
+	if !masterSended {
+		err.Error(fmt.Errorf("no available master link found for id: %d->%d", hid, gid))
 		return
 	}
 
-	ret.Value(host.NewDuplicatedHost(master, slaves).Right())
+	err.Error(nil)
 	return
 }
 
