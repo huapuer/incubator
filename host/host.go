@@ -38,7 +38,7 @@ type Host interface {
 	SetId(int64)
 	Valid(bool)
 	IsValid() bool
-	Receive(net.Conn, message.RemoteMessage) maybe.MaybeError
+	Receive(message.RemoteMessage) maybe.MaybeError
 }
 
 type MaybeHost struct {
@@ -109,4 +109,11 @@ func (this *commonLinkHost) GetGuestId() int64 {
 func (this *commonLinkHost) SetGuestId(id int64) {
 	this.guestId = id
 	return
+}
+
+type SessionHost interface {
+	Host
+
+	SetPeer(net.Conn)
+	Replicate() MaybeHost
 }

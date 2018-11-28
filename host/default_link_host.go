@@ -6,7 +6,6 @@ import (
 	"github.com/incubator/message"
 	"github.com/incubator/serialization"
 	"github.com/incubator/storage"
-	"net"
 	"unsafe"
 )
 
@@ -23,7 +22,7 @@ type defaultLinkHost struct {
 	commonLinkHost
 }
 
-func (this *defaultLinkHost) Receive(conn net.Conn, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this *defaultLinkHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
 	message.Route(msg).Test()
 	return
 }

@@ -3,11 +3,12 @@ package layer
 import (
 	"../common/maybe"
 	"../config"
+	"../host"
 	"../message"
 	"../router"
 	"errors"
 	"fmt"
-	"../host"
+	"github.com/incubator/topo"
 )
 
 var (
@@ -55,6 +56,7 @@ type Layer interface {
 	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
 	LookupHost(int64) host.MaybeHost
 	LookupLink(int64, int64) host.MaybeHost
+	GetTopo() topo.Topo
 }
 
 type MaybeLayer struct {

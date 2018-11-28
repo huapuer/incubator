@@ -1,11 +1,11 @@
 package message
 
 import (
-	"incubator/actor"
-	"incubator/common/maybe"
+	"../actor"
+	"../common/maybe"
 	"encoding/json"
-	"unsafe"
 	"fmt"
+	"unsafe"
 )
 
 const (
@@ -14,23 +14,21 @@ const (
 
 func init() {
 	RegisterMessagePrototype(NodeResultMessageClassName, &NodeResultMessage{
-		commonSessionedMessage: commonSessionedMessage{
-			commonMessage:commonMessage{
-				layer:  -1,
-				typ:    -1,
-				master: -1,
-				hostId: -1,
-			},
+		commonMessage: commonMessage{
+			layerId: -1,
+			typ:     -1,
+			master:  -1,
+			hostId:  -1,
 		},
 	}).Test()
 }
 
 type NodeResultMessage struct {
-	commonSessionedMessage
+	commonMessage
 
 	info struct {
 		addr string
-		msg string
+		msg  string
 	}
 }
 
@@ -67,5 +65,3 @@ func (this *NodeResultMessage) Replicate() (ret MaybeRemoteMessage) {
 	ret.Value(&new)
 	return
 }
-
-

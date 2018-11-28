@@ -2,10 +2,10 @@ package layer
 
 import (
 	"../config"
-	"errors"
-	"fmt"
 	"../host"
 	"../topo"
+	"errors"
+	"fmt"
 )
 
 const (
@@ -70,4 +70,8 @@ func (this defaultLayer) LookupHost(id int64) host.MaybeHost {
 
 func (this defaultLayer) LookupLink(hid int64, gid int64) host.MaybeHost {
 	return this.topo.LookupLink(hid, gid)
+}
+
+func (this defaultLayer) GetTopo() topo.Topo {
+	return this.topo
 }

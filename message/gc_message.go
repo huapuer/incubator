@@ -15,10 +15,10 @@ const (
 func init() {
 	RegisterMessagePrototype(GCMessageClassName, &GCMessage{
 		commonMessage: commonMessage{
-			layer:  -1,
-			typ:    -1,
-			master: -1,
-			hostId: -1,
+			layerId: -1,
+			typ:     -1,
+			master:  -1,
+			hostId:  -1,
 		},
 	}).Test()
 }

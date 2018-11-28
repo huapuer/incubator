@@ -6,7 +6,6 @@ import (
 	"../layer"
 	"../serialization"
 	"fmt"
-	"../protocal"
 )
 
 var (
@@ -35,7 +34,7 @@ func GetMessagePrototype(name string) (ret MaybeRemoteMessage) {
 func RoutePackage(data []byte, layerId uint8, typ uint8) (err maybe.MaybeError) {
 	l := layer.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
-	protocal.Unmarshal(data, msg).Test()
+	serialization.UnmarshalRemoteMessage(data, msg).Test()
 	router := l.GetRouter(int32(typ)).Right()
 	router.Route(msg).Test()
 	return
@@ -53,7 +52,7 @@ func SendToHost(m RemoteMessage, layerId int32, hostId int64) (err maybe.MaybeEr
 	if hostId <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", hostId))
 	}
-	layer.GetLayer(layerId).Right().LookupHost(hostId).Right().Receive(nil, m).Test()
+	layer.GetLayer(layerId).Right().LookupHost(hostId).Right().Receive(m).Test()
 	return
 }
 
@@ -64,7 +63,7 @@ func SendToLink(m RemoteMessage, layerId int32, hostId int64, guestId int64) (er
 	if guestId <= 0 {
 		err.Error(fmt.Errorf("illegal guest id: %d", guestId))
 	}
-	layer.GetLayer(layerId).Right().LookupLink(hostId, guestId).Right().Receive(nil, m).Test()
+	layer.GetLayer(layerId).Right().LookupLink(hostId, guestId).Right().Receive(m).Test()
 	return
 }
 
@@ -104,22 +103,22 @@ func (this MaybeRemoteMessage) Right() RemoteMessage {
 }
 
 type commonMessage struct {
-	layer  int8
-	typ    int8
-	master int8
-	hostId int64
+	layerId int8
+	typ     int8
+	master  int8
+	hostId  int64
 }
 
 func (this *commonMessage) GetLayer() int8 {
-	return this.layer
+	return this.layerId
 }
 
 func (this *commonMessage) SetLayer(layer int8) (err maybe.MaybeError) {
 	if layer < 0 {
-		err.Error(fmt.Errorf("illegal message layer: %d", layer))
+		err.Error(fmt.Errorf("illegal message layerId: %d", layer))
 		return
 	}
-	this.layer = layer
+	this.layerId = layer
 	return
 }
 
@@ -158,55 +157,8 @@ func (this *commonMessage) SetHostId(hostId int64) (err maybe.MaybeError) {
 	return
 }
 
-type SeesionedMessage interface {
-	RemoteMessage
-
-	SetSessionId(int64)
-	GetSesseionId() int64
-	ToServer()
-	ToClient()
-	IsToServer() maybe.MaybeBool
-}
-
-type commonSessionedMessage struct {
-	commonMessage
-
-	toServer  int8
-	sessionId int64
-}
-
-const (
-	SESSEION_MESSAGE_TO_SERVER = iota
-	SESSION_MESSAGE_TO_CLIENT
-)
-
-func (this commonSessionedMessage) GetSessionId() int64 {
-	return this.sessionId
-}
-
-func (this *commonSessionedMessage) SetSessionId(sid int64) {
-	this.sessionId = sid
-}
-
-func (this *commonSessionedMessage) ToServer() {
-	this.toServer = SESSEION_MESSAGE_TO_SERVER
-}
-
-func (this *commonSessionedMessage) ToClient() {
-	this.toServer = SESSION_MESSAGE_TO_CLIENT
-}
-
-func (this commonSessionedMessage) IsToServer() (ret maybe.MaybeBool) {
-	if this.toServer < 0 {
-		ret.Error(fmt.Errorf("is to server flag not set"))
-		return
-	}
-	ret.Value(this.toServer == SESSEION_MESSAGE_TO_SERVER)
-	return
-}
-
 type EchoMessage interface {
-	SeesionedMessage
+	Message
 
 	SetSrcLayer(int8) maybe.MaybeError
 	GetSrcLayer() int8
@@ -215,7 +167,7 @@ type EchoMessage interface {
 }
 
 type commonEchoMessage struct {
-	commonSessionedMessage
+	commonMessage
 
 	srcLayer  int8
 	srcHostId int64
@@ -227,7 +179,7 @@ func (this *commonEchoMessage) GetSrcLayer() int8 {
 
 func (this *commonEchoMessage) SetSrcLayer(layer int8) (err maybe.MaybeError) {
 	if layer < 0 {
-		err.Error(fmt.Errorf("illegal message layer: %d", layer))
+		err.Error(fmt.Errorf("illegal message layerId: %d", layer))
 		return
 	}
 	this.srcLayer = layer

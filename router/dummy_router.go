@@ -25,7 +25,7 @@ func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
 	attrsMap, ok := attrs.(map[string]interface{})
 	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new router %s", defaultRouterClassName))
+		ret.Error(fmt.Errorf("illegal cfg type when new router %s", dummyRouterClassName))
 		return ret
 	}
 	actorSchema, ok := attrsMap["ActorSchema"]

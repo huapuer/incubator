@@ -1,12 +1,12 @@
 package main
 
 import (
-	"flag"
-	"io/ioutil"
-	"fmt"
-	"os"
+	"../config"
 	"encoding/json"
-	"incubator/config"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"os"
 )
 
 func main() {

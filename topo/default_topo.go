@@ -1,14 +1,14 @@
 package topo
 
 import (
+	"../common/maybe"
 	"../config"
 	"../host"
+	"../persistence"
 	"../serialization"
 	"../storage"
 	"errors"
 	"fmt"
-	"../common/maybe"
-	"../persistence"
 	"unsafe"
 )
 
@@ -482,4 +482,8 @@ func (this defaultTopo) TraverseLinksOfHost(hid int64, callback func(ptr unsafe.
 
 func (this defaultTopo) GetRemoteHosts() []host.Host {
 	return this.remoteHosts
+}
+
+func (this *defaultTopo) AddHost(host.Host) maybe.MaybeError {
+	panic("not implemented")
 }

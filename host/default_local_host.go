@@ -6,7 +6,6 @@ import (
 	"../message"
 	"../serialization"
 	"../storage"
-	"net"
 	"unsafe"
 )
 
@@ -22,7 +21,7 @@ type defaultLocalHost struct {
 	commonHost
 }
 
-func (this defaultLocalHost) Receive(conn net.Conn, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this defaultLocalHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
 	message.Route(msg).Test()
 	return
 }

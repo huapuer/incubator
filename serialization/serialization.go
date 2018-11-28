@@ -2,6 +2,7 @@ package serialization
 
 import (
 	"../common/maybe"
+	"github.com/incubator/message"
 	"unsafe"
 )
 
@@ -58,6 +59,25 @@ func Unmarshal(data []byte, obj Serializable) (err maybe.MaybeError) {
 	if ljsn > 0 {
 		jsn := data[lval+2 : lth]
 		obj.SetJsonField(jsn).Test()
+	}
+
+	return
+}
+
+//go:noescape
+func UnmarshalRemoteMessage(data []byte, msg message.RemoteMessage) (err maybe.MaybeError) {
+	lth := int32(len(data))
+	lval := msg.GetSize()
+
+	val := data[:lval]
+	ms := (*mimicSlice)(unsafe.Pointer(&val))
+	mi := (*mimicIFace)(unsafe.Pointer(&msg))
+	mi.data = ms.addr
+
+	ljsn := lth - lval
+	if ljsn > 0 {
+		jsn := data[lval+2 : lth]
+		msg.SetJsonField(jsn).Test()
 	}
 
 	return

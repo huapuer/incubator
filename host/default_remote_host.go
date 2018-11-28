@@ -7,7 +7,6 @@ import (
 	"../network"
 	"errors"
 	"fmt"
-	"net"
 )
 
 const (
@@ -25,7 +24,7 @@ type defaultRemoteHost struct {
 	client  network.Client
 }
 
-func (this *defaultRemoteHost) Receive(conn net.Conn, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this *defaultRemoteHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
 	this.client.Send(msg).Test()
 	return
 }

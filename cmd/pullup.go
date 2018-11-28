@@ -1,15 +1,15 @@
 package main
 
 import (
-	"flag"
-	"io/ioutil"
-	"fmt"
-	"os"
+	"../config"
+	"../message"
+	"../serialization"
 	"encoding/json"
-	"incubator/config"
-	"incubator/message"
+	"flag"
+	"fmt"
+	"io/ioutil"
 	"net"
-	"incubator/serialization"
+	"os"
 )
 
 type node struct {
@@ -24,7 +24,7 @@ func main() {
 	recover := flag.Bool("recover", false, "recover")
 	flag.Parse()
 
-	if *layer  < 1 {
+	if *layer < 1 {
 		fmt.Printf("illegal layer(<1): %d", *layer)
 		os.Exit(1)
 	}
@@ -72,7 +72,7 @@ func main() {
 	json.Unmarshal(file, &nodesCfg)
 
 	for _, node := range nodesCfg {
-		go func(){
+		go func() {
 			conn, e := net.Dial("tcp", node.Address)
 			if e != nil {
 				fmt.Printf("Connection error: %v\n", e)
@@ -83,7 +83,6 @@ func main() {
 				Right().Replicate().
 				Right().(*message.PullUpMessage)
 
-			msg.ToServer()
 			msg.SetAddr(node.Address)
 			msg.SetCfg(&cfg)
 

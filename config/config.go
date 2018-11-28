@@ -77,7 +77,6 @@ type Config struct {
 	Clients  map[int32]*Client
 }
 
-
 func (this *Config) init() (err maybe.MaybeError) {
 	if this.Layer.Id < 0 {
 		err.Error(fmt.Errorf("illegal layer layer: %d", this.Layer.Id))

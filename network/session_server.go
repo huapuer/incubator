@@ -3,17 +3,19 @@ package network
 import (
 	"../common/maybe"
 	"../layer"
-	"../message"
+	"github.com/incubator/message"
 	"github.com/incubator/serialization"
+	"github.com/incubator/topo"
+	"math/rand"
 	"net"
 )
 
-type defaultServer struct {
+type sessionServer struct {
 	commonServer
 }
 
 //go:noescape
-func (this defaultServer) handlePackage(data []byte, c net.Conn) (err maybe.MaybeError) {
+func (this sessionServer) handlePackage(data []byte, c net.Conn) (err maybe.MaybeError) {
 	layerId := data[0]
 	typ := data[1]
 
@@ -21,6 +23,10 @@ func (this defaultServer) handlePackage(data []byte, c net.Conn) (err maybe.Mayb
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
 	serialization.UnmarshalRemoteMessage(data, msg).Test()
 
+	sessId := rand.Int63()
+
+	l.GetTopo().(topo.SessionTopo).AddHost(sessId, c).Test()
+	msg.(message.SeesionedMessage).SetSessionId(sessId)
 	message.Route(msg).Test()
 	return
 }

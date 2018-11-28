@@ -5,6 +5,7 @@ import (
 	"../config"
 	"../host"
 	"fmt"
+	"net"
 	"unsafe"
 )
 
@@ -54,4 +55,10 @@ func (this MaybeTopo) Value(value Topo) {
 func (this MaybeTopo) Right() Topo {
 	this.Test()
 	return this.value
+}
+
+type SessionTopo interface {
+	Topo
+
+	AddHost(int64, net.Conn) maybe.MaybeError
 }

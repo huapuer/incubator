@@ -1,12 +1,15 @@
 package protocal
 
 import (
-	"incubator/serialization"
-	"incubator/common/maybe"
+	"github.com/incubator/message"
+)
+
+const (
+	PROTOCAL_PARSE_STATE_SHORT = -1
+	PROTOCAL_PARSE_STATE_ERROR = -2
 )
 
 type Protocal interface {
-	Marshal(serialization.Serializable) []byte
-	Unmarshal([]byte, serialization.Serializable) maybe.MaybeError
-	GetPackageLen([]byte) maybe.MaybeInt
+	Pack(message.RemoteMessage) []byte
+	Parse([]byte) (int, int)
 }

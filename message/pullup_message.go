@@ -4,11 +4,11 @@ import (
 	"../actor"
 	"../common/maybe"
 	"../config"
+	"../layer"
 	"encoding/json"
 	"errors"
-	"unsafe"
 	"fmt"
-	"incubator/layer"
+	"unsafe"
 )
 
 const (
@@ -17,23 +17,21 @@ const (
 
 func init() {
 	RegisterMessagePrototype(PullUpMessageClassName, &PullUpMessage{
-		commonSessionedMessage: commonSessionedMessage{
-			commonMessage:commonMessage{
-				layer:  -1,
-				typ:    -1,
-				master: -1,
-				hostId: -1,
-			},
+		commonMessage: commonMessage{
+			layerId: -1,
+			typ:     -1,
+			master:  -1,
+			hostId:  -1,
 		},
 	}).Test()
 }
 
 type PullUpMessage struct {
-	commonSessionedMessage
+	commonMessage
 
 	info struct {
 		addr string
-		cfg *config.Config
+		cfg  *config.Config
 	}
 }
 
@@ -56,15 +54,14 @@ func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 		Right().Replicate().
 		Right().(*NodeResultMessage)
 
-	rMsg.SetSessionId(this.GetSessionId())
-	rMsg.ToClient()
+	rMsg.SetHostId(this.GetHostId())
 
 	maybe.TryCatch(
-		func(){
+		func() {
 			this.info.cfg.Process().Test()
 			rMsg.info.msg = "ok"
 		},
-		func(err error){
+		func(err error) {
 			rMsg.info.msg = fmt.Sprintf("%s", err)
 		})
 
