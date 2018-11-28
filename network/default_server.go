@@ -4,10 +4,13 @@ import (
 	"../common/maybe"
 	"../message"
 	"errors"
+	"incubator/protocal"
 )
 
 type defaultServer struct {
 	commonServer
+
+	p protocal.Protocal
 }
 
 //go:noescape
@@ -28,21 +31,15 @@ func (this defaultServer) handleData(data []byte, l int) (err maybe.MaybeError) 
 		err.Error(errors.New("empty data"))
 		return
 	}
-	if this.packageSize == 0 {
-		this.packageSize = int(data[0])
-		this.packageBuffer = data[1:]
-	} else {
-		want := len(this.packageBuffer) + l - this.packageSize
-		if want >= 0 {
-			pkg := this.packageBuffer
-			pkg = append(pkg, data[:want]...)
-			if want > 0 {
-				this.packageBuffer = data[want:]
-			}
-			this.packageSize = 0
+	this.packageBuffer = append(this.packageBuffer, data...)
+	if this.packageSize < 0 {
+		this.packageSize = this.p.GetPackageLen(data).Right()
+	}
+	if this.packageSize >= 0{
+		if this.readBufferSize >= this.packageSize {
+			pkg := this.packageBuffer[:this.packageSize]
+			this.packageBuffer = this.packageBuffer[this.packageSize:]
 			this.handlePackage(pkg).Test()
-		} else {
-			this.packageBuffer = append(this.packageBuffer, data...)
 		}
 	}
 

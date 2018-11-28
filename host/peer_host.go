@@ -35,8 +35,8 @@ func (this *peerHost) Receive(conn net.Conn, msg message.RemoteMessage) (err may
 			err.Error(errors.New("peer conn not set"))
 			return
 		}
-		message.Route(m).Test()
 		this.peers[m.GetSesseionId()] = conn
+		message.Route(m).Test()
 	} else {
 		peer, ok := this.peers[m.GetSesseionId()]
 		if !ok {

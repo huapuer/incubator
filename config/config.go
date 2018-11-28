@@ -3,9 +3,7 @@ package config
 import (
 	"../common/maybe"
 	"../layer"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 )
 
 type Actor struct {
@@ -79,21 +77,8 @@ type Config struct {
 	Clients  map[int32]*Client
 }
 
-func init() {
-	configFile, err := ioutil.ReadFile("conf/main.xml")
-	if err != nil {
-		panic(err)
-	}
-	cfg := &Config{}
-	err = json.Unmarshal(configFile, &cfg)
-	if err != nil {
-		panic(err)
-	}
 
-	cfg.Process().Test()
-}
-
-func (this *Config) Process() (err maybe.MaybeError) {
+func (this *Config) init() (err maybe.MaybeError) {
 	if this.Layer.Id < 0 {
 		err.Error(fmt.Errorf("illegal layer layer: %d", this.Layer.Id))
 	}
@@ -169,7 +154,22 @@ func (this *Config) Process() (err maybe.MaybeError) {
 		this.Clients[c.Schema] = c
 	}
 
+	err.Error(nil)
+	return
+}
+
+func (this *Config) Process() (err maybe.MaybeError) {
+	this.init().Test()
 	layer.SetLayer(*this).Test()
 
+	err.Error(nil)
 	return
+}
+
+func (this *Config) GetLayer() layer.CommonLayer {
+	this.init().Test()
+	layer := layer.CommonLayer{}
+	layer.Init(this.Layer.Attributes, *this).Test()
+
+	return layer
 }

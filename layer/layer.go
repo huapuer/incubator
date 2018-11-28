@@ -78,7 +78,7 @@ func (this MaybeLayer) Right() Layer {
 	return this.value
 }
 
-type commonLayer struct {
+type CommonLayer struct {
 	space                     string
 	layer                     int32
 	messageCanonicalFromClass map[string]message.RemoteMessage
@@ -87,7 +87,7 @@ type commonLayer struct {
 	messageRouters            map[int32]router.Router
 }
 
-func (this *commonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
+func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
 	if cfg.Layer.Space == "" {
 		err.Error(errors.New("layer space not set"))
 		return
@@ -150,7 +150,7 @@ func (this *commonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 	return
 }
 
-func (this commonLayer) GetRouter(id int32) (ret router.MaybeRouter) {
+func (this CommonLayer) GetRouter(id int32) (ret router.MaybeRouter) {
 	if val, ok := this.routers[id]; ok {
 		ret.Value(val)
 		return
@@ -159,7 +159,7 @@ func (this commonLayer) GetRouter(id int32) (ret router.MaybeRouter) {
 	return
 }
 
-func (this commonLayer) GetMessageFromClass(name string) (ret message.MaybeRemoteMessage) {
+func (this CommonLayer) GetMessageFromClass(name string) (ret message.MaybeRemoteMessage) {
 	if val, ok := this.messageCanonicalFromClass[name]; ok {
 		ret.Value(val)
 		return
@@ -168,7 +168,7 @@ func (this commonLayer) GetMessageFromClass(name string) (ret message.MaybeRemot
 	return
 }
 
-func (this commonLayer) GetMessageCanonicalFromType(typ int32) (ret message.MaybeRemoteMessage) {
+func (this CommonLayer) GetMessageCanonicalFromType(typ int32) (ret message.MaybeRemoteMessage) {
 	if val, ok := this.messageCanonicalFromType[typ]; ok {
 		ret.Value(val)
 		return

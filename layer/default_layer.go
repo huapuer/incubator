@@ -17,7 +17,7 @@ func init() {
 }
 
 type defaultLayer struct {
-	commonLayer
+	CommonLayer
 
 	topo topo.Topo
 }
@@ -26,7 +26,7 @@ func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeLayer{}
 
 	layer := &defaultLayer{
-		commonLayer: commonLayer{},
+		CommonLayer: CommonLayer{},
 	}
 
 	layer.Init(attrs, cfg).Test()

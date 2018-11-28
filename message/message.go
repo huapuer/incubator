@@ -6,6 +6,7 @@ import (
 	"../layer"
 	"../serialization"
 	"fmt"
+	"../protocal"
 )
 
 var (
@@ -34,7 +35,7 @@ func GetMessagePrototype(name string) (ret MaybeRemoteMessage) {
 func RoutePackage(data []byte, layerId uint8, typ uint8) (err maybe.MaybeError) {
 	l := layer.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
-	serialization.Unmarshal(data, msg).Test()
+	protocal.Unmarshal(data, msg).Test()
 	router := l.GetRouter(int32(typ)).Right()
 	router.Route(msg).Test()
 	return

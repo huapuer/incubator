@@ -7,40 +7,74 @@ import (
 	"encoding/json"
 	"errors"
 	"unsafe"
+	"fmt"
+	"incubator/layer"
 )
 
 const (
-	pullUpMessageClassName = "message.pullUpMessage"
+	PullUpMessageClassName = "message.PullUpMessage"
 )
 
 func init() {
-	RegisterMessagePrototype(pullUpMessageClassName, &pullUpMessage{
-		commonMessage: commonMessage{
-			layer:  -1,
-			typ:    -1,
-			master: -1,
-			hostId: -1,
+	RegisterMessagePrototype(PullUpMessageClassName, &PullUpMessage{
+		commonSessionedMessage: commonSessionedMessage{
+			commonMessage:commonMessage{
+				layer:  -1,
+				typ:    -1,
+				master: -1,
+				hostId: -1,
+			},
 		},
 	}).Test()
 }
 
-type pullUpMessage struct {
-	commonMessage
+type PullUpMessage struct {
+	commonSessionedMessage
 
-	cfg *config.Config
+	info struct {
+		addr string
+		cfg *config.Config
+	}
 }
 
-func (this *pullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
-	if this.cfg == nil {
+func (this *PullUpMessage) SetAddr(addr string) {
+	this.info.addr = addr
+}
+
+func (this *PullUpMessage) SetCfg(cfg *config.Config) {
+	this.info.cfg = cfg
+}
+
+func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+	if this.info.cfg == nil {
 		err.Error(errors.New("cfg is nil"))
 		return
 	}
-	this.cfg.Process().Test()
+
+	rMsg := layer.GetLayer(int32(this.GetLayer())).
+		Right().GetMessageFromClass(NodeResultMessageClassName).
+		Right().Replicate().
+		Right().(*NodeResultMessage)
+
+	rMsg.SetSessionId(this.GetSessionId())
+	rMsg.ToClient()
+
+	maybe.TryCatch(
+		func(){
+			this.info.cfg.Process().Test()
+			rMsg.info.msg = "ok"
+		},
+		func(err error){
+			rMsg.info.msg = fmt.Sprintf("%s", err)
+		})
+
+	SendToHost(rMsg, int32(this.GetLayer()), this.GetHostId()).Test()
+
 	return
 }
 
-func (this *pullUpMessage) GetJsonBytes() (ret maybe.MaybeBytes) {
-	bytes, err := json.Marshal(this.cfg)
+func (this *PullUpMessage) GetJsonBytes() (ret maybe.MaybeBytes) {
+	bytes, err := json.Marshal(this.info)
 	if err != nil {
 		ret.Error(err)
 	} else {
@@ -49,19 +83,19 @@ func (this *pullUpMessage) GetJsonBytes() (ret maybe.MaybeBytes) {
 	return
 }
 
-func (this *pullUpMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
-	e := json.Unmarshal(data, this.cfg)
+func (this *PullUpMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
+	e := json.Unmarshal(data, this.info)
 	if e != nil {
 		err.Error(e)
 	}
 	return
 }
 
-func (this *pullUpMessage) GetSize() int32 {
+func (this *PullUpMessage) GetSize() int32 {
 	return int32(unsafe.Sizeof(*this))
 }
 
-func (this *pullUpMessage) Replicate() (ret MaybeRemoteMessage) {
+func (this *PullUpMessage) Replicate() (ret MaybeRemoteMessage) {
 	new := *this
 	ret.Value(&new)
 	return
