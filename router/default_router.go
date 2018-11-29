@@ -6,6 +6,7 @@ import (
 	"../config"
 	"../message"
 	"fmt"
+	"context"
 )
 
 const (
@@ -71,6 +72,12 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	ret.Value(newRouter)
 	return ret
+}
+
+func (this defaultRouter) Start() {
+	for _, actor := range this.actors {
+		actor.Start(context.Background()).Test()
+	}
 }
 
 //go:noescape

@@ -2,7 +2,7 @@ package serialization
 
 import (
 	"../common/maybe"
-	"github.com/incubator/message"
+	"../message"
 	"unsafe"
 )
 

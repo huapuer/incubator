@@ -2,11 +2,26 @@ package protocal
 
 import (
 	"../serialization"
-	"github.com/incubator/message"
+	"../message"
 	"unsafe"
+	"../config"
 )
 
+const (
+	fixHeaderProtocalClassName = "protocal.fixHeaderProtocal"
+)
+
+func init() {
+	RegisterProtocalPrototype(fixHeaderProtocalClassName, &fixHeaderProtocal{}).Test()
+}
+
 type fixHeaderProtocal struct{}
+
+func (this fixHeaderProtocal) New(attrs interface{}, cfg config.Config) config.IOC {
+	ret := MaybeProtocal{}
+	ret.Value(&fixHeaderProtocal{})
+	return ret
+}
 
 func (this *fixHeaderProtocal) Pack(msg message.RemoteMessage) (ret []byte) {
 	bytes := serialization.Marshal(msg)

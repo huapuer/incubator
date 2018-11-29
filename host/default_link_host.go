@@ -1,11 +1,11 @@
 package host
 
 import (
-	"github.com/incubator/common/maybe"
-	"github.com/incubator/config"
-	"github.com/incubator/message"
-	"github.com/incubator/serialization"
-	"github.com/incubator/storage"
+	"../common/maybe"
+	"../config"
+	"../message"
+	"../serialization"
+	"../storage"
 	"unsafe"
 )
 

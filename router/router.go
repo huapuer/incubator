@@ -32,6 +32,7 @@ func GetRouterPrototype(name string) (ret MaybeRouter) {
 type Router interface {
 	config.IOC
 
+	Start()
 	Route(message.RemoteMessage) maybe.MaybeError
 }
 

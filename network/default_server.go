@@ -4,12 +4,36 @@ import (
 	"../common/maybe"
 	"../layer"
 	"../message"
-	"github.com/incubator/serialization"
+	"../serialization"
 	"net"
+	"incubator/config"
+	"incubator/protocal"
 )
+
+const (
+	defaultServerClassName = "server.defaultServer"
+)
+
+func init() {
+	RegisterServerPrototype(defaultServerClassName, &defaultServer{}).Test()
+}
 
 type defaultServer struct {
 	commonServer
+}
+
+func (this defaultServer) New(attrs interface{}, cfg config.Config) config.IOC {
+	ret := MaybeServer{}
+	s := &defaultServer{
+		commonServer{
+			network:cfg.Server.Network,
+			address:cfg.Server.Address,
+			p: protocal.GetProtocalPrototype(cfg.Server.Protocal).Right(),
+		},
+	}
+	s.Inherit(s)
+	ret.Value(s)
+	return ret
 }
 
 //go:noescape

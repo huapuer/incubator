@@ -9,7 +9,7 @@ import (
 	"../storage"
 	"errors"
 	"fmt"
-	"github.com/incubator/message"
+	"../message"
 	"unsafe"
 )
 

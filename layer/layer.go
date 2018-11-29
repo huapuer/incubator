@@ -7,8 +7,9 @@ import (
 	"../router"
 	"errors"
 	"fmt"
-	"github.com/incubator/serialization"
-	"github.com/incubator/topo"
+	"../serialization"
+	"../topo"
+	"incubator/network"
 )
 
 var (
@@ -54,7 +55,9 @@ type Layer interface {
 	GetRouter(int32) router.MaybeRouter
 	GetMessageType(interface{}) maybe.MaybeInt32
 	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
+	Start()
 	GetTopo() topo.Topo
+	GetServer() network.Server
 }
 
 type MaybeLayer struct {
@@ -85,6 +88,7 @@ type CommonLayer struct {
 	messageCanonicalFromType map[int32]message.RemoteMessage
 	routers                  map[int32]router.Router
 	messageRouters           map[int32]router.Router
+	server network.Server
 }
 
 func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
@@ -110,15 +114,6 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 
 	this.messageRouters = make(map[int32]router.Router)
 
-	for _, routerCfg := range cfg.Routers {
-		if _, ok := this.routers[routerCfg.Id]; ok {
-			err.Error(fmt.Errorf("router already exists: %d", routerCfg.Id))
-			return
-		}
-		routerPrototype := router.GetRouterPrototype(routerCfg.Class).Right()
-		this.routers[routerCfg.Id] = routerPrototype
-	}
-
 	this.messageClassToType = make(map[int]int32)
 	this.messageCanonicalFromType = make(map[int32]message.RemoteMessage)
 
@@ -127,18 +122,27 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 			err.Error(fmt.Errorf("message canonical type already exists: %d", msgCfg.Type))
 			return
 		}
-		if _, ok := this.messageRouters[msgCfg.RouterId]; !ok {
-			err.Error(fmt.Errorf("router %d not found when register message type %d", msgCfg.RouterId, msgCfg.Type))
-		}
 
 		msgCanon := message.GetMessagePrototype(msgCfg.Class).Right()
 		msgCanon.SetLayer(int8(this.layer))
 		msgCanon.SetType(int8(msgCfg.Type))
 
-		// TODO: deep copy
 		this.messageCanonicalFromType[msgCfg.Type] = msgCanon
+		_type := serialization.Eface2TypeInt(msgCanon)
+		this.messageClassToType[_type] = msgCfg.Type
 
-		this.messageRouters[msgCfg.Type], _ = this.routers[msgCfg.RouterId]
+		r, ok := this.routers[msgCfg.RouterId]
+		if !ok {
+			routerCfg, ok := cfg.Routers[msgCfg.RouterId]
+			if !ok {
+				err.Error(fmt.Errorf("router cfg for %d not found when register message type %d",
+					msgCfg.RouterId, msgCfg.Type))
+				return
+			}
+			this.routers[msgCfg.RouterId] = router.GetRouterPrototype(routerCfg.Class).
+				Right().New(routerCfg.Attributes, cfg).(router.MaybeRouter).Right()
+		}
+		this.messageRouters[msgCfg.Type] = r
 	}
 
 	err.Error(nil)

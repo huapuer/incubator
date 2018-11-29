@@ -10,6 +10,9 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"incubator/layer"
+	"context"
+	"sync"
 )
 
 type node struct {
@@ -17,15 +20,15 @@ type node struct {
 }
 
 func main() {
-	layer := flag.Int("layer", 0, "layer id")
+	layerId := flag.Int("layer", 0, "layer id")
 	nodesFile := flag.String("nodes-file", "", "nodes file")
 	groundLayerFile := flag.String("ground-layer-file", "", "ground layer file")
 	layerFile := flag.String("layer-file", "", "layer file")
 	recover := flag.Bool("recover", false, "recover")
 	flag.Parse()
 
-	if *layer < 1 {
-		fmt.Printf("illegal layer(<1): %d", *layer)
+	if *layerId < 1 {
+		fmt.Printf("illegal layer(<1): %d", *layerId)
 		os.Exit(1)
 	}
 
@@ -42,8 +45,9 @@ func main() {
 		fmt.Printf("Config error: %v\n", e)
 		os.Exit(1)
 	}
+	groudCfg.Process().Test()
 
-	groundLayer := groudCfg.GetLayer()
+	groundLayer := layer.GetLayer(groudCfg.Layer.Id).Right()
 
 	file, e = ioutil.ReadFile(*layerFile)
 	if e != nil {
@@ -58,7 +62,7 @@ func main() {
 		fmt.Printf("Config error: %v\n", e)
 		os.Exit(1)
 	}
-	cfg.Layer.Id = int32(*layer)
+	cfg.Layer.Id = int32(*layerId)
 	cfg.Layer.Recover = *recover
 
 	file, e = ioutil.ReadFile(*nodesFile)
@@ -71,7 +75,9 @@ func main() {
 	nodesCfg := make([]node, 0, 0)
 	json.Unmarshal(file, &nodesCfg)
 
+	wg := sync.WaitGroup{}
 	for _, node := range nodesCfg {
+		wg.Add(1)
 		go func() {
 			conn, e := net.Dial("tcp", node.Address)
 			if e != nil {
@@ -92,7 +98,11 @@ func main() {
 				os.Exit(1)
 			}
 
-			conn.r
+			groundLayer.GetServer().HandleConnection(context.Background(), conn)
+
+			wg.Done()
 		}()
 	}
+
+	wg.Wait()
 }

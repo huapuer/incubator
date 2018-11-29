@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/incubator/layer"
+	"../layer"
 	"unsafe"
 )
 
@@ -60,6 +60,8 @@ func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 	maybe.TryCatch(
 		func() {
 			this.info.cfg.Process().Test()
+			layer.GetLayer(this.info.cfg.Layer.Id).Right().Start()
+			
 			rMsg.info.msg = "ok"
 		},
 		func(err error) {

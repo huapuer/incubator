@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"incubator/layer"
 )
 
 func main() {
@@ -26,4 +27,5 @@ func main() {
 	cfg.Layer.Recover = *recover
 
 	cfg.Process().Test()
+	layer.GetLayer(cfg.Layer.Id).Right().Start()
 }

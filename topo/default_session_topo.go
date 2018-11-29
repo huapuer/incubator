@@ -6,7 +6,7 @@ import (
 	"../host"
 	"errors"
 	"fmt"
-	"github.com/incubator/message"
+	"../message"
 	"net"
 	"unsafe"
 )

@@ -6,38 +6,89 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/incubator/protocal"
+	"../protocal"
 	"math/rand"
 	"net"
 	"time"
+	"incubator/config"
+	"incubator/common/class"
 )
 
+var (
+	serverPrototypes = make(map[string]Server)
+)
+
+func RegisterServerPrototype(name string, val Server) (err maybe.MaybeError) {
+	if _, ok := serverPrototypes[name]; ok {
+		err.Error(fmt.Errorf("server prototype redefined: %s", name))
+		return
+	}
+	serverPrototypes[name] = val
+	return
+}
+
+func GetServerPrototype(name string) (ret MaybeServer) {
+	if prototype, ok := serverPrototypes[name]; ok {
+		ret.Value(prototype)
+		return
+	}
+	ret.Error(fmt.Errorf("server prototype for class not found: %s", name))
+	return
+}
+
 type Server interface {
-	Start(Server, context.Context, string, string) maybe.MaybeError
-	handleConnection(Server, context.Context, net.Conn)
-	handleData(Server, []byte, int, net.Conn) maybe.MaybeError
+	config.IOC
+
+	Start(context.Context) maybe.MaybeError
+	HandleConnection(context.Context, net.Conn)
+	handleData([]byte, int, net.Conn) maybe.MaybeError
 	handlePackage([]byte, net.Conn) maybe.MaybeError
 }
 
+type MaybeServer struct {
+	config.IOC
+
+	maybe.MaybeError
+	value Server
+}
+
+func (this MaybeServer) Value(value Server) {
+	this.Error(nil)
+	this.value = value
+}
+
+func (this MaybeServer) Right() Server {
+	this.Test()
+	return this.value
+}
+
+func (this MaybeServer) New(cfg config.Config, args ...int32) config.IOC {
+	panic("not implemented.")
+}
+
 type commonServer struct {
+	class.Class
+
+	network string
+	address string
 	readBufferSize int
 	packageBuffer  []byte
 	packageSize    int
 	headerSize     int
 	p              protocal.Protocal
+	derived Server
 }
 
-func (this commonServer) Start(server Server, ctx context.Context, network string, port string) (err maybe.MaybeError) {
+func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 	this.packageBuffer = make([]byte, this.readBufferSize, 0)
 
-	if network == "" {
+	if this.network == "" {
 		err.Error(errors.New("not network provided"))
 	}
-	if port == "" {
-		err.Error(errors.New("no port provided"))
+	if this.address == "" {
+		err.Error(errors.New("no address provided"))
 	}
-	port = ":" + port
-	l, e := net.Listen(network, port)
+	l, e := net.Listen(this.network, this.address)
 	if e != nil {
 		err.Error(e)
 		return
@@ -56,12 +107,12 @@ func (this commonServer) Start(server Server, ctx context.Context, network strin
 			return
 		}
 		maybe.TryCatch(func() {
-			go server.handleConnection(server, ctx, c)
+			go this.HandleConnection(ctx, c)
 		}, nil)
 	}
 }
 
-func (this commonServer) handleConnection(server Server, ctx context.Context, c net.Conn) {
+func (this commonServer) HandleConnection(ctx context.Context, c net.Conn) {
 	defer c.Close()
 	reader := bufio.NewReader(c)
 	buffer := make([]byte, this.readBufferSize)
@@ -74,19 +125,19 @@ func (this commonServer) handleConnection(server Server, ctx context.Context, c 
 		if err != nil {
 			panic(err)
 		}
-		this.handleData(server, buffer, len, c).Test()
+		this.handleData(buffer, len, c).Test()
 	}
 	return
 }
 
 //go:noescape
-func (this commonServer) handlePacakge(server Server, data []byte, c net.Conn) (err maybe.MaybeError) {
-	server.handlePackage(data, c)
+func (this commonServer) handlePacakge(data []byte, c net.Conn) (err maybe.MaybeError) {
+	this.derived.handlePackage(data, c)
 	return
 }
 
 //go:noescape
-func (this commonServer) handleData(server Server, data []byte, l int, c net.Conn) (err maybe.MaybeError) {
+func (this commonServer) handleData(data []byte, l int, c net.Conn) (err maybe.MaybeError) {
 	if l == 0 {
 		err.Error(errors.New("empty data"))
 		return
@@ -99,7 +150,7 @@ func (this commonServer) handleData(server Server, data []byte, l int, c net.Con
 		if this.readBufferSize >= this.packageSize {
 			pkg := this.packageBuffer[this.headerSize:this.packageSize]
 			this.packageBuffer = this.packageBuffer[this.packageSize:]
-			server.handlePackage(pkg).Test()
+			this.derived.handlePackage(pkg, c).Test()
 			this.packageSize = protocal.PROTOCAL_PARSE_STATE_SHORT
 		}
 	} else if this.packageSize == protocal.PROTOCAL_PARSE_STATE_ERROR {
@@ -108,4 +159,8 @@ func (this commonServer) handleData(server Server, data []byte, l int, c net.Con
 	}
 
 	return
+}
+
+func (this *commonServer) Inherit(cobj class.Class) {
+	this.derived = cobj.(Server)
 }

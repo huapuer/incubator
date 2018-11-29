@@ -60,7 +60,13 @@ type Config struct {
 		//TotalHostNum    int64         `json:"TotalHostNum"`
 		//LocalHostMod int32  `json:"LocalHostMod`
 		//RemoteTable []RemoteEntry `json:"RemoteTable>Entry"`
-	} `json:"Id"`
+	} `json:"Layer"`
+	Server struct {
+		Class string	`json:"Class"`
+		Network string 	`json:"Network"`
+		Address string `json:"Address""`
+		Protocal string	`json:"Protocal""`
+	} `json:"Server"`
 	actors   []*Actor `json:"Actors"`
 	Actors   map[int32]*Actor
 	routers  []*Router `json:"Routers"`
@@ -163,12 +169,4 @@ func (this *Config) Process() (err maybe.MaybeError) {
 
 	err.Error(nil)
 	return
-}
-
-func (this *Config) GetLayer() layer.CommonLayer {
-	this.init().Test()
-	layer := layer.CommonLayer{}
-	layer.Init(this.Layer.Attributes, *this).Test()
-
-	return layer
 }

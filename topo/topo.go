@@ -5,7 +5,7 @@ import (
 	"../config"
 	"../host"
 	"fmt"
-	"github.com/incubator/message"
+	"../message"
 	"net"
 	"unsafe"
 )
