@@ -9,5 +9,6 @@ import (
 type Client interface {
 	config.IOC
 
+	Connect(string)
 	Send(message message.RemoteMessage) maybe.MaybeError
 }

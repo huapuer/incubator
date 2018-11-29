@@ -34,6 +34,10 @@ func (this spikeRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
+func (this spikeRouter) Start() {
+	this.router.Start()
+}
+
 //go:noescape
 func (this spikeRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
 	maybe.TryCatch(

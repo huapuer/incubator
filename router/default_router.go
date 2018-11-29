@@ -24,49 +24,27 @@ type defaultRouter struct {
 
 func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
-	attrsMap, ok := attrs.(map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new router %s", defaultRouterClassName))
-		return ret
-	}
-	actorSchema, ok := attrsMap["ActorSchema"]
-	if !ok {
-		ret.Error(fmt.Errorf("no router attribute found: %s", "ActorClass"))
-		return ret
-	}
-	actorSchemaInt, ok := actorSchema.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("actor class cfg type error(expecting int): %+v", actorSchema))
-		return ret
-	}
-	actorNum, ok := attrsMap["ActorNum"]
-	if !ok {
-		ret.Error(fmt.Errorf("no router attribute found: %s", "ActorNum"))
-		return ret
-	}
-	actorNumInt, ok := actorNum.(int)
-	if !ok {
-		ret.Error(fmt.Errorf("actor num cfg type error(expecting int): %+v", actorNumInt))
-		return ret
-	}
 
-	actorCfg, ok := cfg.Actors[actorSchemaInt]
+	actorSchema:=config.GetAttrInt32(attrs, "ActorSchema", config.CheckInt32GT0).Right()
+	actorNum:=config.GetAttrInt(attrs, "ActorNum", config.CheckIntGT0).Right()
+
+	actorCfg, ok := cfg.Actors[actorSchema]
 	if !ok {
-		ret.Error(fmt.Errorf("no actor cfg found: %s", actorSchemaInt))
+		ret.Error(fmt.Errorf("no actor cfg found: %s", actorSchema))
 		return ret
 	}
 	actorAttrs := actorCfg.Attributes
 	if actorAttrs == nil {
 		if !ok {
-			ret.Error(fmt.Errorf("no actor attribute found: %d", actorSchemaInt))
+			ret.Error(fmt.Errorf("no actor attribute found: %d", actorSchema))
 			return ret
 		}
 	}
 	newRouter := &defaultRouter{
-		actorsNum: actorNumInt,
+		actorsNum: actorNum,
 		actors:    make([]actor.Actor, 0, 0),
 	}
-	for i := 0; i < actorNumInt; i++ {
+	for i := 0; i < actorNum; i++ {
 		newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right()
 		newRouter.actors = append(newRouter.actors, newActor)
 	}

@@ -4,7 +4,6 @@ import (
 	"../common/maybe"
 	"../config"
 	"../host"
-	"errors"
 	"fmt"
 	"../message"
 	"net"
@@ -31,27 +30,7 @@ func (this defaultSessionTopo) New(attrs interface{}, cfg config.Config) config.
 		hosts: make(map[int64]host.SessionHost),
 	}
 
-	attrsMap, ok := attrs.(map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new layer %s", defaultTopoClassName))
-		return ret
-	}
-
-	localHostSchema, ok := attrsMap["LocalHostSchema"]
-	if !ok {
-		ret.Error(errors.New("attribute LocalHostSchema not found"))
-		return ret
-	}
-	localHostSchemaInt, ok := localHostSchema.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("local host class cfg type error(expecting int32): %+v", localHostSchema))
-		return ret
-	}
-	if localHostSchemaInt <= 0 {
-		ret.Error(fmt.Errorf("illegal LocalHostSchema: %d", localHostSchemaInt))
-		return ret
-	}
-	topo.hostSchema = localHostSchemaInt
+	topo.hostSchema = config.GetAttrInt32(attrs, "LocalHostSchema", config.CheckInt32GT0).Right()
 
 	localHostCfg, ok := cfg.Hosts[topo.hostSchema]
 	if !ok {

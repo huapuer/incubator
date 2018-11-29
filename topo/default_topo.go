@@ -7,7 +7,6 @@ import (
 	"../persistence"
 	"../serialization"
 	"../storage"
-	"errors"
 	"fmt"
 	"../message"
 	"unsafe"
@@ -33,7 +32,6 @@ type defaultTopo struct {
 	backupFactor     int32
 	localHostSchema  int32
 	linkSchema       int32
-	remoteHostSchema int32
 	localHosts       storage.DenseTable
 	links            storage.DenseTable
 	remoteHosts      []host.Host
@@ -48,133 +46,25 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		remoteHosts: make([]host.Host, 0, 0),
 	}
 
-	attrsMap, ok := attrs.(map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new layer %s", defaultTopoClassName))
-		return ret
-	}
+	topo.totalHostNum = config.GetAttrInt64(attrs, "TotalHostNum", config.CheckInt64GT0).Right()
+	topo.linkRadius = config.GetAttrInt64(attrs, "LinkRadius", config.CheckInt64GT0).Right()
+	topo.localHostMod = config.GetAttrInt32(attrs, "LocalHostMod", config.CheckInt32GT0).Right()
+	topo.backupFactor = config.GetAttrInt32(attrs, "BackupFactor", config.CheckInt32GT0).Right()
+	topo.localHostSchema = config.GetAttrInt32(attrs, "LocalHostSchema", config.CheckInt32GT0).Right()
 
-	totalHostNum, ok := attrsMap["TotalHostNum"]
-	if !ok {
-		ret.Error(errors.New("attribute TotalHostNum not found"))
-		return ret
-	}
-	localNumInt, ok := totalHostNum.(int64)
-	if !ok {
-		ret.Error(fmt.Errorf("total host num cfg type error(expecting int): %+v", totalHostNum))
-		return ret
-	}
-	if localNumInt <= 0 {
-		ret.Error(fmt.Errorf("illegal total host num : %d", localNumInt))
-		return ret
-	}
-	topo.totalHostNum = localNumInt
-
-	linkRadius, ok := attrsMap["LinkRadius"]
-	if !ok {
-		ret.Error(errors.New("attribute LinkRadius not found"))
-		return ret
-	}
-	linkRadiusInt, ok := linkRadius.(int64)
-	if !ok {
-		ret.Error(fmt.Errorf("link radius cfg type error(expecting int): %+v", linkRadius))
-		return ret
-	}
-	if linkRadiusInt <= 0 {
-		ret.Error(fmt.Errorf("illegal link radius: %d", linkRadiusInt))
-		return ret
-	}
-	topo.linkRadius = linkRadiusInt
-
-	localHostMod, ok := attrsMap["LocalHostMod"]
-	if !ok {
-		ret.Error(errors.New("attribute LocalHostMod not found"))
-		return ret
-	}
-	localHostModInt, ok := localHostMod.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("local host mod cfg type error(expecting int): %+v", localHostMod))
-		return ret
-	}
-	if localHostModInt <= 0 {
-		ret.Error(fmt.Errorf("illegal local host mod : %d", localHostModInt))
-		return ret
-	}
-	topo.localHostMod = localHostModInt
-
-	backupFactor, ok := attrsMap["BackupFactor"]
-	if !ok {
-		ret.Error(errors.New("attribute BackupFactor not found"))
-		return ret
-	}
-	backupFactoInt, ok := backupFactor.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("backup factor cfg type error(expecting int): %+v", backupFactor))
-		return ret
-	}
-	if backupFactoInt < 0 {
-		ret.Error(fmt.Errorf("illegal backup factor : %d", localHostModInt))
-		return ret
-	}
-	topo.backupFactor = backupFactoInt
-
-	localHostSchema, ok := attrsMap["LocalHostSchema"]
-	if !ok {
-		ret.Error(errors.New("attribute LocalHostSchema not found"))
-		return ret
-	}
-	localHostSchemaInt, ok := localHostSchema.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("local host class cfg type error(expecting int32): %+v", localHostSchema))
-		return ret
-	}
-	if localHostSchemaInt <= 0 {
-		ret.Error(fmt.Errorf("illegal LocalHostSchema: %d", localHostSchemaInt))
-		return ret
-	}
-	topo.localHostSchema = localHostSchemaInt
-
-	remoteHostSchema, ok := attrsMap["RemoteHostSchema"]
-	if !ok {
-		ret.Error(errors.New("attribute RemoteHostSchema not found"))
-		return ret
-	}
-	remoteHostClassInt, ok := remoteHostSchema.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("remote host class cfg type error(expecting int): %+v", remoteHostSchema))
-		return ret
-	}
-	if remoteHostClassInt <= 0 {
-		ret.Error(fmt.Errorf("illegal RemoteHostSchema: %d", remoteHostSchema))
-		return ret
-	}
-	topo.remoteHostSchema = remoteHostClassInt
-
-	remoteEntries, ok := attrsMap["RemoteEntries"]
-	if !ok {
-		ret.Error(errors.New("attribute RemoteEntries not found"))
-		return ret
-	}
-	remoteEntriesMap, ok := remoteEntries.([]map[string]string)
-	if !ok {
-		ret.Error(fmt.Errorf("attribute RemoteEntries has illegal type(expecting []map[string]string: %+v", remoteEntries))
-		return ret
-	}
-	topo.remoteNum = int32(len(remoteEntriesMap))
+	remoteEntries := config.GetAttrMapEface(attrs, "RemoteEntries").Right().(map[string]interface{})
+	topo.remoteNum = int32(len(remoteEntries))
 
 	if topo.localHostMod != topo.remoteNum {
 		ret.Error(fmt.Errorf("local offset(%d) != total entry num - 1(%d)", topo.localHostMod, topo.remoteNum))
 		return ret
 	}
 
-	for i := int32(0); i < topo.remoteNum; i++ {
-		remoteHostCfg, ok := cfg.Hosts[topo.remoteHostSchema]
-		if !ok {
-			ret.Error(fmt.Errorf("no remote host cfg found: %d", topo.remoteHostSchema))
-			return ret
-		}
+	for _, entry := range remoteEntries {
+		remoteHostClass := config.GetAttrString(entry, "RemoteHostClass", config.CheckStringNotEmpty).Right()
+		remoteHostAttr := config.GetAttrMapEface(entry, "Attributes").Right()
 		topo.remoteHosts = append(
-			topo.remoteHosts, host.GetHostPrototype(remoteHostCfg.Class).Right().(config.IOC).New(remoteHostCfg.Attributes, cfg).(host.MaybeHost).Right())
+			topo.remoteHosts, host.GetHostPrototype(remoteHostClass).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right())
 	}
 
 	localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
@@ -228,101 +118,25 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	topo.linkCanon = host.GetHostPrototype(linkCfg.Class).Right()
 
-	linkAttr := linkCfg.Attributes
-	if linkAttr == nil {
-		ret.Error(errors.New("link attr is nil"))
-		return ret
-	}
-	linkAttrMap, ok := linkAttr.(map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("illegal link attr type when new layer %s", defaultTopoClassName))
-		return ret
-	}
-	linkSparseEntries, ok := linkAttrMap["SparseEnties"]
-	if !ok {
-		ret.Error(errors.New("link sparse entry cfg not found"))
-		return ret
-	}
-	linkSparseEntriesArray, ok := linkSparseEntries.([]map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("link sparse entries cfg type error(expecting []map[stirng]interface{}): %+v", linkSparseEntries))
-		return ret
-	}
+	linkSparseEntries := config.GetAttrMapEfaceArray(linkCfg.Attributes, "SparseEnties").Right().([]map[string]interface{})
+
 	entries := make([]*storage.SparseEntry, 0, 0)
-	for i, entryCfg := range linkSparseEntriesArray {
-		keyTo, ok := entryCfg["KeyTo"]
-		if !ok {
-			ret.Error(fmt.Errorf("sparse entry KeyTo attr not found, index: %d", i))
-			return ret
-		}
-		keyToInt, ok := keyTo.(int64)
-		if !ok {
-			ret.Error(fmt.Errorf("illegal KeyTo type(expecting int64): %v, index: %d", keyTo, i))
-			return ret
-		}
-
-		offset, ok := entryCfg["Offset"]
-		if !ok {
-			ret.Error(fmt.Errorf("sparse entry Offset attr not found, index: %d", i))
-			return ret
-		}
-		offsetInt, ok := offset.(int64)
-		if !ok {
-			ret.Error(fmt.Errorf("illegal Offset type(expecting int64): %v, index: %d", offset, i))
-			return ret
-		}
-
-		size, ok := entryCfg["Size"]
-		if !ok {
-			ret.Error(fmt.Errorf("sparse entry Size attr not found, index: %d", i))
-			return ret
-		}
-		sizeInt, ok := size.(int64)
-		if !ok {
-			ret.Error(fmt.Errorf("illegal Size type(expecting int64): %v, index: %d", size, i))
-			return ret
-		}
-
-		hashDepth, ok := entryCfg["HashDepth"]
-		if !ok {
-			ret.Error(fmt.Errorf("sparse entry HashDepth attr not found, index: %d", i))
-			return ret
-		}
-		hashDepthInt, ok := hashDepth.(int32)
-		if !ok {
-			ret.Error(fmt.Errorf("illegal HashDepth type(expecting int32): %v, index: %d", hashDepth, i))
-			return ret
-		}
+	for _, entryCfg := range linkSparseEntries {
+		keyTo:=config.GetAttrInt64(entryCfg, "KeyTo", config.CheckInt64GT0).Right()
+		offset:=config.GetAttrInt64(entryCfg, "Offset", config.CheckInt64GT0).Right()
+		size:=config.GetAttrInt64(entryCfg, "Size", config.CheckInt64GT0).Right()
+		hashDepth:=config.GetAttrInt32(entryCfg, "Offset", config.CheckInt32GET0).Right()
 
 		entries = append(entries, &storage.SparseEntry{
-			KeyTo:      keyToInt,
-			Offset:     offsetInt,
-			Size:       sizeInt,
-			HashStride: hashDepthInt,
+			KeyTo:      keyTo,
+			Offset:     offset,
+			Size:       size,
+			HashStride: hashDepth,
 		})
 	}
 
-	linkDenseSize, ok := linkAttrMap["DenseSize"]
-	if !ok {
-		ret.Error(errors.New("link DenseSize attr not found"))
-		return ret
-	}
-	linkDenseSizeInt, ok := linkDenseSize.(int64)
-	if !ok {
-		ret.Error(fmt.Errorf("illegal link DenseSize attr type(expecting int64): %v", linkDenseSize))
-		return ret
-	}
-
-	linkHashDepth, ok := linkAttrMap["HashDepth"]
-	if !ok {
-		ret.Error(errors.New("link HashDepth attr not found"))
-		return ret
-	}
-	linkHashDepthInt, ok := linkHashDepth.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("illegal link HashDepth attr type(expecting int32): %v", linkHashDepth))
-		return ret
-	}
+	linkDenseSize := config.GetAttrInt64(linkCfg.Attributes, "DenseSize", config.CheckInt64GT0).Right()
+	linkHashDepth:=config.GetAttrInt32(linkCfg.Attributes, "HashDepth", config.CheckInt32GET0).Right()
 
 	if cfg.Layer.Recover {
 		topo.localHosts = storage.NewDenseTable(
@@ -331,7 +145,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.totalHostNum/int64(topo.remoteNum),
 			entries,
 			topo.localHostCanon.(host.Host).GetSize(),
-			linkHashDepthInt,
+			linkHashDepth,
 			persistence.FromPersistence(
 				cfg.Layer.Space,
 				cfg.Layer.Id,
@@ -341,10 +155,10 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		topo.links = storage.NewDenseTable(
 			topo.linkCanon.(storage.DenseTableElement),
 			topo.totalHostNum*int64(topo.backupFactor),
-			linkDenseSizeInt,
+			linkDenseSize,
 			entries,
 			topo.linkCanon.(host.Host).GetSize(),
-			linkHashDepthInt,
+			linkHashDepth,
 			nil).Right()
 
 		//TODO: init links

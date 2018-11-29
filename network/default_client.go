@@ -5,8 +5,6 @@ import (
 	"../config"
 	"../message"
 	"../serialization"
-	"errors"
-	"fmt"
 	"time"
 )
 
@@ -17,6 +15,9 @@ var (
 type defaultClient struct {
 	config.IOC
 
+	maxIdle int32
+	maxBusy int32
+	timeout int64
 	pool connectionPool
 }
 
@@ -44,64 +45,20 @@ func (this MaybeDefualtClient) New(cfg config.Config, args ...int32) config.IOC 
 func (this *defaultClient) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeDefualtClient{}
 
-	if attrs == nil {
-		ret.Error(errors.New("attrs is nil when new default client"))
-		return ret
-	}
-	attrsMap, ok := attrs.(map[string]interface{})
-	if !ok {
-		ret.Error(errors.New("illegal attrs type when new default client"))
-		return ret
-	}
-
-	maxIdle, ok := attrsMap["MaxSpare"]
-	if !ok {
-		ret.Error(errors.New("attribute MaxSpare not found"))
-		return ret
-	}
-	maxIdleInt, ok := maxIdle.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("max idle cfg type error(expecting int): %+v", maxIdle))
-		return ret
-	}
-
-	maxBusy, ok := attrsMap["MaxBusy"]
-	if !ok {
-		ret.Error(errors.New("attribute MaxBusy not found"))
-		return ret
-	}
-	maxBusyInt, ok := maxBusy.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("max busy cfg type error(expecting int): %+v", maxIdle))
-		return ret
-	}
-
-	timeout, ok := attrsMap["Timeout"]
-	if !ok {
-		ret.Error(errors.New("attribute Timeout not found"))
-		return ret
-	}
-	timeoutInt, ok := timeout.(int64)
-	if !ok {
-		ret.Error(fmt.Errorf("timeout cfg type error(expecting int): %+v", timeout))
-		return ret
-	}
-
-	addr, ok := attrsMap["Address"]
-	if !ok {
-		ret.Error(errors.New("attribute Address not found"))
-		return ret
-	}
-	addrStr, ok := timeout.(string)
-	if !ok {
-		ret.Error(fmt.Errorf("address cfg type error(expecting string): %+v", addr))
-		return ret
-	}
+	this.maxIdle = config.GetAttrInt32(attrs, "MaxIdle", config.CheckInt32GT0).Right()
+	this.maxBusy = config.GetAttrInt32(attrs, "MaxBusy", config.CheckInt32GT0).Right()
+	this.timeout = config.GetAttrInt64(attrs, "Timeout", config.CheckInt64GT0).Right()
 
 	ret.Value(&defaultClient{
-		pool: NewConnectionPool(addrStr, maxIdleInt, maxBusyInt, time.Duration(timeoutInt)).Right(),
+		maxIdle:config.GetAttrInt32(attrs, "MaxIdle", config.CheckInt32GT0).Right(),
+		maxBusy:config.GetAttrInt32(attrs, "MaxBusy", config.CheckInt32GT0).Right(),
+		timeout:config.GetAttrInt64(attrs, "Timeout", config.CheckInt64GT0).Right(),
 	})
 	return ret
+}
+
+func (this *defaultClient) Connect (addr string) {
+	this.pool = NewConnectionPool(addr, this.maxIdle, this.maxBusy, time.Duration(this.timeout)).Right()
 }
 
 //go:noescape

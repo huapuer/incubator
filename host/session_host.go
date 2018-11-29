@@ -5,7 +5,6 @@ import (
 	"../config"
 	"../message"
 	"../serialization"
-	"fmt"
 	"net"
 	"unsafe"
 )
@@ -25,13 +24,7 @@ type defaultSessionHost struct {
 }
 
 func (this *defaultSessionHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
-	m, ok := msg.(message.Message)
-	if !ok {
-		err.Error(fmt.Errorf("peer host receiving not sessioned message: %+v", msg))
-		return
-	}
-
-	_, e := this.peer.Write(serialization.Marshal(m))
+	_, e := this.peer.Write(serialization.Marshal(msg))
 	if e != nil {
 		err.Error(e)
 		return

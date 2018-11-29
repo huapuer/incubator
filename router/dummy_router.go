@@ -24,31 +24,18 @@ type dummyRouter struct {
 
 func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
-	attrsMap, ok := attrs.(map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new router %s", dummyRouterClassName))
-		return ret
-	}
-	actorSchema, ok := attrsMap["ActorSchema"]
-	if !ok {
-		ret.Error(fmt.Errorf("no router attribute found: %s", "ActorClass"))
-		return ret
-	}
-	actorSchemaInt, ok := actorSchema.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("actor class cfg type error(expecting int): %+v", actorSchema))
-		return ret
-	}
 
-	actorCfg, ok := cfg.Actors[actorSchemaInt]
+	actorSchema:=config.GetAttrInt32(attrs, "ActorSchema", config.CheckInt32GT0).Right()
+
+	actorCfg, ok := cfg.Actors[actorSchema]
 	if !ok {
-		ret.Error(fmt.Errorf("no actor cfg found: %s", actorSchemaInt))
+		ret.Error(fmt.Errorf("no actor cfg found: %s", actorSchema))
 		return ret
 	}
 	actorAttrs := actorCfg.Attributes
 	if actorAttrs == nil {
 		if !ok {
-			ret.Error(fmt.Errorf("no actor attribute found: %d", actorSchemaInt))
+			ret.Error(fmt.Errorf("no actor attribute found: %d", actorSchema))
 			return ret
 		}
 	}

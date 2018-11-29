@@ -5,7 +5,6 @@ import (
 	"../config"
 	"../message"
 	"../network"
-	"errors"
 	"fmt"
 	"unsafe"
 )
@@ -21,7 +20,6 @@ func init() {
 type defaultRemoteHost struct {
 	commonHost
 
-	address string
 	client  network.Client
 }
 
@@ -33,41 +31,24 @@ func (this *defaultRemoteHost) Receive(msg message.RemoteMessage) (err maybe.May
 func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeHost{}
 
-	if attrs == nil {
-		ret.Error(fmt.Errorf("attrs is nil when new host: %s", defaultRemoteHostClassName))
-		return ret
-	}
-	attrsMap, ok := attrs.(map[string]interface{})
+	clientSchema := config.GetAttrInt32(attrs, "ClientSchema", nil).Right()
+	addr := config.GetAttrString(attrs, "Address", config.CheckStringNotEmpty).Right()
+
+	clientCfg, ok := cfg.Clients[clientSchema]
 	if !ok {
-		ret.Error(fmt.Errorf("illegal cfg type when new host: %s", defaultRemoteHostClassName))
+		ret.Error(fmt.Errorf("client cfg not found: %d", clientSchema))
 		return ret
 	}
 
-	clientSchema, ok := attrsMap["ClientSchema"]
-	if !ok {
-		ret.Error(errors.New("attribute ClientSchema not found"))
-		return ret
-	}
-	clientSchemaInt, ok := clientSchema.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("client schema cfg type error(expecting int): %+v", clientSchema))
-		return ret
-	}
-
-	clientCfg, ok := cfg.Clients[clientSchemaInt]
-	if !ok {
-		ret.Error(fmt.Errorf("client cfg not found: %d", clientCfg))
-		return ret
-	}
-
-	//TODO: real logic
-	ret.Value(&defaultRemoteHost{
+	host := &defaultRemoteHost{
 		commonHost: commonHost{
 			valid: true,
 		},
 		client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),
-	})
-	return ret
+	}
+	host.client.Connect(addr)
+
+	ret.Value(host)
 	return ret
 }
 

@@ -3,7 +3,6 @@ package layer
 import (
 	"../config"
 	"../topo"
-	"errors"
 	"fmt"
 	"incubator/network"
 	"context"
@@ -32,30 +31,11 @@ func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	layer.Init(attrs, cfg).Test()
 
-	attrsMap, ok := cfg.Layer.Attributes.(map[string]interface{})
-	if !ok {
-		ret.Error(fmt.Errorf("layer attrs cfg type error(expecting map[stirng]interface{}): %+v", cfg.Layer.Attributes))
-	}
+	topoSchema := config.GetAttrInt32(attrs, "TopoSchema", config.CheckInt32GT0).Right()
 
-	topoSchema, ok := attrsMap["TopoSchema"]
+	topoCfg, ok := cfg.Topos[topoSchema]
 	if !ok {
-		ret.Error(errors.New("topo schema not set"))
-		return ret
-	}
-
-	topoSchemaInt, ok := topoSchema.(int32)
-	if !ok {
-		ret.Error(fmt.Errorf("topo class cfg type error(expecting int32): %+v", topoSchema))
-		return ret
-	}
-	if topoSchemaInt <= 0 {
-		ret.Error(fmt.Errorf("illegal TopoSchema: %d", topoSchemaInt))
-		return ret
-	}
-
-	topoCfg, ok := cfg.Topos[topoSchemaInt]
-	if !ok {
-		ret.Error(fmt.Errorf("topo cfg not found: %d", topoSchemaInt))
+		ret.Error(fmt.Errorf("topo cfg not found: %d", topoSchema))
 		return ret
 	}
 
