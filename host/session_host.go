@@ -68,3 +68,7 @@ func (this defaultSessionHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool 
 func (this defaultSessionHost) Erase(key int64, ptr unsafe.Pointer) bool {
 	panic("not implemented")
 }
+
+func (this defaultSessionHost) IsHealth() bool {
+	panic("not implemented")
+}

@@ -29,11 +29,7 @@ func (this defaultLocalHost) Receive(msg message.RemoteMessage) (err maybe.Maybe
 func (this defaultLocalHost) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeHost{}
 	//TODO: real logic
-	ret.Value(&defaultLocalHost{
-		commonHost{
-			valid: true,
-		},
-	})
+	ret.Value(&defaultLocalHost{})
 	return ret
 }
 
@@ -67,4 +63,8 @@ func (this defaultLocalHost) Erase(key int64, ptr unsafe.Pointer) bool {
 		h.SetId(storage.DENSE_TABLE_ELEMENT_STATE_EMPTY)
 	}
 	return true
+}
+
+func (this defaultLocalHost) IsHealth() bool {
+	panic("not implemented")
 }

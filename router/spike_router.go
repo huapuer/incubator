@@ -5,6 +5,7 @@ import (
 	"../config"
 	"../message"
 	"runtime"
+	"incubator/actor"
 )
 
 const (
@@ -50,4 +51,12 @@ func (this spikeRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) 
 		})
 
 	return
+}
+
+func (this spikeRouter) SimRoute(seed int64, actorsNum int) int64 {
+	return this.router.SimRoute(seed, actorsNum)
+}
+
+func (this spikeRouter) GetActors() []actor.Actor {
+	return this.router.GetActors()
 }

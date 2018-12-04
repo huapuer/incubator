@@ -52,6 +52,8 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 		}
 	}(ctx)
 
+	//TODO: start actor_heartbeat_message loop
+
 	return
 }
 

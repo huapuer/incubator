@@ -7,6 +7,7 @@ import (
 	"../network"
 	"fmt"
 	"unsafe"
+	"time"
 )
 
 const (
@@ -19,6 +20,7 @@ func init() {
 
 type defaultRemoteHost struct {
 	commonHost
+	defaultHealthManager
 
 	client  network.Client
 }
@@ -33,6 +35,7 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 
 	clientSchema := config.GetAttrInt32(attrs, "ClientSchema", nil).Right()
 	addr := config.GetAttrString(attrs, "Address", config.CheckStringNotEmpty).Right()
+	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
 
 	clientCfg, ok := cfg.Clients[clientSchema]
 	if !ok {
@@ -41,15 +44,24 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 	}
 
 	host := &defaultRemoteHost{
-		commonHost: commonHost{
-			valid: true,
-		},
 		client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),
+		defaultHealthManager: defaultHealthManager{
+			health:true,
+			heartbeatIntvl:time.Duration(heartbeatIntvl),
+		},
 	}
 	host.client.Connect(addr)
 
 	ret.Value(host)
 	return ret
+}
+
+func (this defaultRemoteHost) GetId() int64 {
+	return this.topo.GetRemoteHostId(int32(this.id))
+}
+
+func (this defaultRemoteHost) IsHealth() bool {
+	return this.health
 }
 
 func (this defaultRemoteHost) GetSize() int32 {

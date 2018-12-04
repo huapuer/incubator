@@ -48,22 +48,22 @@ func Route(m RemoteMessage) (err maybe.MaybeError) {
 	return
 }
 
-func SendToHost(m RemoteMessage, layerId int32, hostId int64) (err maybe.MaybeError) {
-	if hostId <= 0 {
-		err.Error(fmt.Errorf("illegal host id: %d", hostId))
+func SendToHost(m RemoteMessage) (err maybe.MaybeError) {
+	if m.GetHostId() <= 0 {
+		err.Error(fmt.Errorf("illegal host id: %d", m.GetHostId()))
 	}
-	layer.GetLayer(layerId).Right().GetTopo().SendToHost(hostId, m).Test()
+	layer.GetLayer(int32(m.GetLayer())).Right().GetTopo().SendToHost(m.GetHostId(), m).Test()
 	return
 }
 
-func SendToLink(m RemoteMessage, layerId int32, hostId int64, guestId int64) (err maybe.MaybeError) {
-	if hostId <= 0 {
-		err.Error(fmt.Errorf("illegal host id: %d", hostId))
+func SendToLink(m RemoteMessage, guestId int64) (err maybe.MaybeError) {
+	if m.GetHostId() <= 0 {
+		err.Error(fmt.Errorf("illegal host id: %d", m.GetHostId()))
 	}
 	if guestId <= 0 {
 		err.Error(fmt.Errorf("illegal guest id: %d", guestId))
 	}
-	layer.GetLayer(layerId).Right().GetTopo().SendToLink(hostId, guestId, m).Test()
+	layer.GetLayer(int32(m.GetLayer())).Right().GetTopo().SendToLink(m.GetHostId(), guestId, m).Test()
 	return
 }
 

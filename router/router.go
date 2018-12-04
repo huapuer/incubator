@@ -5,6 +5,7 @@ import (
 	"../config"
 	"../message"
 	"fmt"
+	"incubator/actor"
 )
 
 var (
@@ -34,6 +35,8 @@ type Router interface {
 
 	Start()
 	Route(message.RemoteMessage) maybe.MaybeError
+	SimRoute(int64, int) int64
+	GetActors() []actor.Actor
 }
 
 type MaybeRouter struct {

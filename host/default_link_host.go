@@ -68,3 +68,7 @@ func (this defaultLinkHost) Erase(key int64, ptr unsafe.Pointer) bool {
 	}
 	return true
 }
+
+func (this defaultLinkHost) IsHealth() bool {
+	panic("not implemented")
+}

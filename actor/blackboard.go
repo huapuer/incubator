@@ -2,11 +2,11 @@ package actor
 
 import (
 	"../common/maybe"
-	"../message"
 	"errors"
 	"fmt"
 	"math/rand"
 	"time"
+	"incubator/message"
 )
 
 func init() {
@@ -29,13 +29,15 @@ func (this *blackBoard) SetState(runner Actor, key string, value interface{}, ex
 	this.data[key] = value
 	token := rand.Int63()
 	this.data[key] = token
-	go func() {
-		<-time.After(expire)
-		runner.Receive(message.StateExpireMessage{
-			key,
-			token,
-			expireFunc})
-	}()
+	if expire > 0 {
+		go func() {
+			<-time.After(expire)
+			runner.Receive(message.StateExpireMessage{
+				key,
+				token,
+				expireFunc})
+		}()
+	}
 	err.Error(nil)
 	return
 }

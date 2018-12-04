@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"../message"
 	"unsafe"
+	"math/rand"
 )
 
 const (
@@ -27,6 +28,7 @@ func init() {
 
 type defaultTopo struct {
 	totalHostNum     int64
+	totalRemoteHostNum int32
 	linkRadius       int64
 	localHostMod     int32
 	backupFactor     int32
@@ -52,7 +54,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	topo.backupFactor = config.GetAttrInt32(attrs, "BackupFactor", config.CheckInt32GT0).Right()
 	topo.localHostSchema = config.GetAttrInt32(attrs, "LocalHostSchema", config.CheckInt32GT0).Right()
 
-	remoteEntries := config.GetAttrMapEface(attrs, "RemoteEntries").Right().(map[string]interface{})
+	remoteEntries := config.GetAttrMapEfaceArray(attrs, "RemoteEntries").Right().([]map[string]interface{})
 	topo.remoteNum = int32(len(remoteEntries))
 
 	if topo.localHostMod != topo.remoteNum {
@@ -60,12 +62,17 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		return ret
 	}
 
-	for _, entry := range remoteEntries {
+	for i, entry := range remoteEntries {
 		remoteHostClass := config.GetAttrString(entry, "RemoteHostClass", config.CheckStringNotEmpty).Right()
 		remoteHostAttr := config.GetAttrMapEface(entry, "Attributes").Right()
-		topo.remoteHosts = append(
-			topo.remoteHosts, host.GetHostPrototype(remoteHostClass).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right())
+
+		h :=  host.GetHostPrototype(remoteHostClass).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right()
+		h.SetId(int64(i))
+		h.(host.HealthManager).Start()
+
+		topo.remoteHosts = append(topo.remoteHosts, h)
 	}
+	topo.totalRemoteHostNum = int32(len(remoteEntries))
 
 	localHostCfg, ok := cfg.Hosts[topo.localHostSchema]
 	if !ok {
@@ -173,44 +180,40 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 //go:noescape
 func (this defaultTopo) SendToHost(id int64, msg message.RemoteMessage) (err maybe.MaybeError) {
 	mod := int32(id % (int64(this.remoteNum)))
-	idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
-	if idx > int32(this.localHosts.ElemLen()) {
-		err.Error(fmt.Errorf("master id exceeds local host range: %d", id))
-		return
-	}
 
 	hosts := make([]host.Host, HostSlotSize, 0)
-
-	if mod == this.localHostMod {
-		h := this.localHostCanon
-		ptr := this.localHosts.Get(0, int64(idx)).Right()
-		serialization.Ptr2IFace(&h, ptr)
-		hosts = append(hosts, h)
-	} else {
-		hosts = append(hosts, this.remoteHosts[mod])
-	}
-	if mod < this.localHostMod+this.backupFactor {
-		h := this.localHostCanon
-		ptr := this.localHosts.Get(0, int64(idx)).Right()
-		serialization.Ptr2IFace(&h, ptr)
-		hosts = append(hosts, h)
-	}
 	for offset := int32(0); offset < this.backupFactor-1; offset++ {
 		ridx := (mod + offset) % (this.remoteNum)
 		hosts = append(hosts, this.remoteHosts[ridx])
 	}
 
 	masterSended := false
-	for _, h := range hosts {
-		if h.IsValid() {
-			if !masterSended {
-				msg.Master(message.MASTER_YES)
-				masterSended = true
-			} else {
-				msg.Master(message.MASTER_NO)
-			}
-			h.Receive(msg).Test()
+	for i, h := range hosts {
+		if !h.IsHealth() {
+			continue
 		}
+
+		realhost := h
+		if mod + int32(i) == this.localHostMod || mod + int32(i) < this.localHostMod+this.backupFactor {
+			idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
+			if idx > int32(this.localHosts.ElemLen()) {
+				err.Error(fmt.Errorf("master id exceeds local host range: %d", id))
+				return
+			}
+
+			h := this.localHostCanon
+			ptr := this.localHosts.Get(0, int64(idx)).Right()
+			serialization.Ptr2IFace(&h, ptr)
+
+			realhost = h
+		}
+		if !masterSended {
+			msg.Master(message.MASTER_YES)
+			masterSended = true
+		} else {
+			msg.Master(message.MASTER_NO)
+		}
+		realhost.Receive(msg).Test()
 	}
 
 	if !masterSended {
@@ -220,6 +223,28 @@ func (this defaultTopo) SendToHost(id int64, msg message.RemoteMessage) (err may
 
 	err.Error(nil)
 	return
+}
+
+//go:noescape
+func (this defaultTopo) LookupHost(id int64) (ret host.MaybeHost) {
+	mod := int32(id % (int64(this.remoteNum)))
+
+	if mod == this.localHostMod {
+		idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
+		if idx > int32(this.localHosts.ElemLen()) {
+			ret.Error(fmt.Errorf("master id exceeds local host range: %d", id))
+			return
+		}
+
+		h := this.localHostCanon
+		ptr := this.localHosts.Get(0, int64(idx)).Right()
+		serialization.Ptr2IFace(&h, ptr)
+		ret.Value(h)
+		return
+	} else {
+		ret.Value(this.remoteHosts[mod])
+		return
+	}
 }
 
 //go:noescape
@@ -262,7 +287,7 @@ func (this defaultTopo) SendToLink(hid int64, gid int64, msg message.RemoteMessa
 
 	masterSended := false
 	for _, h := range hosts {
-		if h.IsValid() {
+		if h.IsHealth() {
 			if !masterSended {
 				msg.Master(message.MASTER_YES)
 				masterSended = true
@@ -282,7 +307,7 @@ func (this defaultTopo) SendToLink(hid int64, gid int64, msg message.RemoteMessa
 	return
 }
 
-func (this defaultTopo) TraverseLinksOfHost(hid int64, callback func(ptr unsafe.Pointer) bool) (err maybe.MaybeError) {
+func (this defaultTopo) TraverseOutLinksOfHost(hid int64, callback func(ptr unsafe.Pointer) bool) (err maybe.MaybeError) {
 	mod := int32(hid % (int64(this.remoteNum)))
 	if mod == this.localHostMod {
 		blk := int32(hid/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
@@ -307,4 +332,8 @@ func (this defaultTopo) GetRemoteHosts() []host.Host {
 
 func (this *defaultTopo) AddHost(host.Host) maybe.MaybeError {
 	panic("not implemented")
+}
+
+func (this defaultTopo) GetRemoteHostId(idx int32) int64 {
+	return int64(idx) + int64(this.totalRemoteHostNum)*rand.Int63n(this.totalHostNum / int64(this.totalRemoteHostNum))
 }

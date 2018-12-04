@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"incubator/router"
+	"errors"
 )
 
 var (
@@ -40,6 +42,8 @@ type Actor interface {
 	UnsetState(string) maybe.MaybeError
 	UnsetStateWithToken(string, int64) maybe.MaybeError
 	SetState(Actor, string, interface{}, time.Duration, func(Actor)) maybe.MaybeError
+	GetRouter() router.MaybeRouter
+	SetRouter(router router.Router) maybe.MaybeError
 }
 
 type MaybeActor struct {
@@ -65,4 +69,22 @@ type commonActor struct {
 	blackBoard
 
 	Topo int32
+	r router.Router
+}
+
+func (this commonActor) GetRouter() (ret router.MaybeRouter) {
+	if this.r == nil {
+		ret.Error(errors.New("no router set"))
+	}
+	ret.Value(this.r)
+	return
+}
+
+func (this *commonActor) SetRouter(r router.Router) (err maybe.MaybeError){
+	if r == nil {
+		err.Error(errors.New("router is nil"))
+	}
+	this.r = r
+	err.Error(nil)
+	return
 }

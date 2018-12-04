@@ -37,8 +37,10 @@ type Topo interface {
 
 	SendToHost(int64, message.RemoteMessage) maybe.MaybeError
 	SendToLink(int64, int64, message.RemoteMessage) maybe.MaybeError
-	TraverseLinksOfHost(int64, func(ptr unsafe.Pointer) bool) maybe.MaybeError
+	TraverseOutLinksOfHost(int64, func(ptr unsafe.Pointer) bool) maybe.MaybeError
 	GetRemoteHosts() []host.Host
+	LookupHost(int64) host.MaybeHost
+	GetRemoteHostId(int32) int64
 }
 
 type MaybeTopo struct {

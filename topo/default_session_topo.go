@@ -69,14 +69,22 @@ func (this defaultSessionTopo) SendToHost(id int64, msg message.RemoteMessage) (
 	return
 }
 
+func (this defaultSessionTopo) LookupHost(id int64) (ret host.MaybeHost) {
+	panic("not implemented")
+}
+
 func (this defaultSessionTopo) SendToLink(hid int64, gid int64, msg message.RemoteMessage) (err maybe.MaybeError) {
 	panic("not implemented")
 }
 
-func (this defaultSessionTopo) TraverseLinksOfHost(hid int64, callback func(ptr unsafe.Pointer) bool) (err maybe.MaybeError) {
+func (this defaultSessionTopo) TraverseOutLinksOfHost(hid int64, callback func(ptr unsafe.Pointer) bool) (err maybe.MaybeError) {
 	panic("not implemented")
 }
 
 func (this defaultSessionTopo) GetRemoteHosts() []host.Host {
+	panic("not implemented")
+}
+
+func (this defaultSessionTopo) GetRemoteHostId(idx int32) int64 {
 	panic("not implemented")
 }

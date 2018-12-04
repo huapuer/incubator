@@ -39,9 +39,10 @@ func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 			return ret
 		}
 	}
-	newRouter := &dummyRouter{
-		actor: actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right(),
-	}
+	newRouter := &dummyRouter{}
+	newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right()
+	newActor.SetRouter(newRouter)
+	newRouter.actor = newActor
 
 	ret.Value(newRouter)
 	return ret
@@ -61,4 +62,12 @@ func (this dummyRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) 
 	this.actor.Receive(msg).Test()
 
 	return
+}
+
+func (this dummyRouter) SimRoute(seed int64, actorsNum int) int64 {
+	return 0
+}
+
+func (this  dummyRouter) GetActors () []actor.Actor{
+	return []actor.Actor{this.actor}
 }

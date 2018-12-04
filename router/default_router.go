@@ -20,6 +20,7 @@ func init() {
 type defaultRouter struct {
 	actors    []actor.Actor
 	actorsNum int
+	shrink int
 }
 
 func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
@@ -27,6 +28,7 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	actorSchema:=config.GetAttrInt32(attrs, "ActorSchema", config.CheckInt32GT0).Right()
 	actorNum:=config.GetAttrInt(attrs, "ActorNum", config.CheckIntGT0).Right()
+	shrink := config.GetAttrInt(attrs, "Shrink", config.CheckIntGT0).Right()
 
 	actorCfg, ok := cfg.Actors[actorSchema]
 	if !ok {
@@ -43,9 +45,11 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	newRouter := &defaultRouter{
 		actorsNum: actorNum,
 		actors:    make([]actor.Actor, 0, 0),
+		shrink:shrink,
 	}
 	for i := 0; i < actorNum; i++ {
 		newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right()
+		newActor.SetRouter(newRouter)
 		newRouter.actors = append(newRouter.actors, newActor)
 	}
 	ret.Value(newRouter)
@@ -66,7 +70,15 @@ func (this defaultRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError
 		return
 	}
 
-	this.actors[seed%int64(this.actorsNum)].Receive(msg).Test()
+	this.actors[(seed/int64(this.shrink))%int64(this.actorsNum)].Receive(msg).Test()
 
 	return
+}
+
+func (this defaultRouter) SimRoute(seed int64, actorsNum int) int64 {
+	return (seed/int64(this.shrink))%int64(actorsNum)
+}
+
+func (this defaultRouter) GetActors() []actor.Actor {
+	return this.actors
 }
