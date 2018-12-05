@@ -2,16 +2,16 @@ package main
 
 import (
 	"../config"
+	"../layer"
 	"../message"
 	"../serialization"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
-	"incubator/layer"
-	"context"
 	"sync"
 )
 

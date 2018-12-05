@@ -1,17 +1,17 @@
 package network
 
 import (
+	"../common/class"
 	"../common/maybe"
+	"../config"
+	"../protocal"
 	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"../protocal"
 	"math/rand"
 	"net"
 	"time"
-	"incubator/config"
-	"incubator/common/class"
 )
 
 var (
@@ -69,14 +69,14 @@ func (this MaybeServer) New(cfg config.Config, args ...int32) config.IOC {
 type commonServer struct {
 	class.Class
 
-	network string
-	address string
+	network        string
+	address        string
 	readBufferSize int
 	packageBuffer  []byte
 	packageSize    int
 	headerSize     int
 	p              protocal.Protocal
-	derived Server
+	derived        Server
 }
 
 func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {

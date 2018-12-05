@@ -6,6 +6,7 @@ import (
 	"../message"
 	"context"
 	"errors"
+	"time"
 )
 
 const (
@@ -19,12 +20,19 @@ func init() {
 type defaultActor struct {
 	commonActor
 	mailBox
+	healthManager
 }
 
 func (this defaultActor) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeActor{}
 
-	actor := &defaultActor{}
+	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
+
+	actor := &defaultActor{
+		healthManager: defaultHealthManager{
+			heartbeatIntvl: time.Duration(heartbeatIntvl),
+		},
+	}
 	actor.mailBox.Init(attrs, cfg).Test()
 
 	ret.Value(actor)
@@ -36,6 +44,8 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 		err.Error(errors.New("mailbox not inited."))
 		return
 	}
+
+	this.healthManager.Start(this).Test()
 
 	go func(ctx context.Context) {
 		for {
@@ -51,8 +61,6 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 			}
 		}
 	}(ctx)
-
-	//TODO: start actor_heartbeat_message loop
 
 	return
 }

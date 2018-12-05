@@ -2,11 +2,11 @@ package actor
 
 import (
 	"../common/maybe"
+	"../message"
 	"errors"
 	"fmt"
 	"math/rand"
 	"time"
-	"incubator/message"
 )
 
 func init() {

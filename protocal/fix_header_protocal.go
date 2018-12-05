@@ -1,10 +1,10 @@
 package protocal
 
 import (
-	"../serialization"
-	"../message"
-	"unsafe"
 	"../config"
+	"../message"
+	"../serialization"
+	"unsafe"
 )
 
 const (

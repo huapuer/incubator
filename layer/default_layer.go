@@ -2,10 +2,10 @@ package layer
 
 import (
 	"../config"
+	"../network"
 	"../topo"
-	"fmt"
-	"incubator/network"
 	"context"
+	"fmt"
 )
 
 const (
@@ -41,7 +41,7 @@ func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	layer.topo = topo.GetTopoPrototype(topoCfg.Class).Right().New(topoCfg.Attributes, cfg).(topo.Topo)
 
-	if cfg.Server.Class != ""{
+	if cfg.Server.Class != "" {
 		this.server = network.GetServerPrototype(cfg.Server.Class).Right().New(nil, cfg).(network.Server)
 	}
 
@@ -54,6 +54,8 @@ func (this defaultLayer) Start() {
 		r.Start()
 	}
 	this.server.Start(context.Background()).Test()
+	this.topo.SetLayer(this.id)
+	this.topo.Start()
 }
 
 func (this defaultLayer) GetTopo() topo.Topo {

@@ -1,12 +1,12 @@
 package actor
 
 import (
-	"../message"
-	"../config"
 	"../common/maybe"
+	"../config"
+	"../message"
 )
 
-type mailBox struct{
+type mailBox struct {
 	mailbox chan message.Message
 }
 

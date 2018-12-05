@@ -7,33 +7,16 @@ import (
 	"unsafe"
 )
 
-const (
-	ActorHeartbeatMessageClassName = "message.ActorHeartbeatMessage"
-)
-
-func init() {
-	RegisterMessagePrototype(ActorHeartbeatMessageClassName, &ActorHeartbeatMessage{
-		commonMessage: commonMessage{
-			layerId: -1,
-			typ:     -1,
-			master:  -1,
-			hostId:  -1,
-		},
-	}).Test()
-}
-
 type ActorHeartbeatMessage struct {
-	commonMessage
-
-	interval time.Duration
+	Interval time.Duration
 }
 
 func (this *ActorHeartbeatMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
-	runner.SetState(runner, "health_intvl", this.interval, 0, nil)
+	runner.SetState(runner, "health_intvl", this.Interval, 0, nil)
 	runner.SetState(runner, "health_til", time.Now().Unix(), 0, nil)
 
 	go func() {
-		<-time.After(this.interval)
+		<-time.After(this.Interval)
 		runner.Receive(this)
 	}()
 

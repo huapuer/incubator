@@ -6,8 +6,8 @@ import (
 	"../message"
 	"../network"
 	"fmt"
-	"unsafe"
 	"time"
+	"unsafe"
 )
 
 const (
@@ -22,7 +22,7 @@ type defaultRemoteHost struct {
 	commonHost
 	defaultHealthManager
 
-	client  network.Client
+	client network.Client
 }
 
 func (this *defaultRemoteHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
@@ -35,6 +35,7 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 
 	clientSchema := config.GetAttrInt32(attrs, "ClientSchema", nil).Right()
 	addr := config.GetAttrString(attrs, "Address", config.CheckStringNotEmpty).Right()
+	checkIntvl := config.GetAttrInt64(attrs, "CheckIntvl", config.CheckInt64GT0).Right()
 	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
 
 	clientCfg, ok := cfg.Clients[clientSchema]
@@ -46,18 +47,15 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 	host := &defaultRemoteHost{
 		client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),
 		defaultHealthManager: defaultHealthManager{
-			health:true,
-			heartbeatIntvl:time.Duration(heartbeatIntvl),
+			health:         true,
+			checkIntvl:     time.Duration(checkIntvl),
+			heartbeatIntvl: time.Duration(heartbeatIntvl),
 		},
 	}
 	host.client.Connect(addr)
 
 	ret.Value(host)
 	return ret
-}
-
-func (this defaultRemoteHost) GetId() int64 {
-	return this.topo.GetRemoteHostId(int32(this.id))
 }
 
 func (this defaultRemoteHost) IsHealth() bool {

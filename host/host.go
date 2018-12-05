@@ -4,10 +4,9 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
-	"fmt"
 	"../storage"
+	"fmt"
 	"net"
-	"incubator/topo"
 )
 
 var (
@@ -40,8 +39,6 @@ type Host interface {
 	SetId(int64)
 	Receive(message.RemoteMessage) maybe.MaybeError
 	IsHealth() bool
-	SetTopo(topo topo.Topo)
-	GetTopo() topo.Topo
 }
 
 type MaybeHost struct {
@@ -66,8 +63,7 @@ func (this MaybeHost) New(cfg config.Config, args ...int32) config.IOC {
 }
 
 type commonHost struct {
-	id    int64
-	topo topo.Topo
+	id int64
 }
 
 func (this commonHost) GetId() int64 {
@@ -77,14 +73,6 @@ func (this commonHost) GetId() int64 {
 func (this *commonHost) SetId(id int64) {
 	this.id = id
 	return
-}
-
-func (this commonHost) SetTopo(topo topo.Topo) {
-	this.topo = topo
-}
-
-func (this commonHost) GetTopo() topo.Topo{
-	return this.topo
 }
 
 type commonLinkHost struct {

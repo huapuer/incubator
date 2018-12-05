@@ -1,12 +1,11 @@
 package message
 
 import (
-	"incubator/actor"
-	"incubator/common/maybe"
+	"../actor"
+	"../common/maybe"
+	"../host"
+	"../layer"
 	"unsafe"
-	"encoding/json"
-	"incubator/layer"
-	"incubator/host"
 )
 
 const (
@@ -27,41 +26,29 @@ func init() {
 type HealthCheckRespMessage struct {
 	commonMessage
 
-	totalActor int32
-	actorHealth []bool
+	health bool
 }
 
 func (this *HealthCheckRespMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
-	health := true
-	for _, h := range this.actorHealth {
-		if !h {
-			health =false
-			break
-		}
-	}
-	if health {
+	if this.health {
 		layer.GetLayer(int32(this.GetLayer())).
 			Right().GetTopo().LookupHost(this.GetHostId()).
 			Right().(host.HealthManager).Health()
+	} else {
+		//TODO: send the recover pullup_message
+		//TODO: and need the topo recovery facility to support (topo version)
 	}
+	err.Error(nil)
 	return
 }
 
 func (this *HealthCheckRespMessage) GetJsonBytes() (ret maybe.MaybeBytes) {
-	bytes, err := json.Marshal(this.actorHealth)
-	if err != nil {
-		ret.Error(err)
-	} else {
-		ret.Value(bytes)
-	}
+	ret.Error(nil)
 	return
 }
 
 func (this *HealthCheckRespMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
-	e := json.Unmarshal(data, this.actorHealth)
-	if e != nil {
-		err.Error(e)
-	}
+	err.Error(nil)
 	return
 }
 

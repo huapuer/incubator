@@ -4,12 +4,12 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
+	"../network"
 	"../router"
-	"errors"
-	"fmt"
 	"../serialization"
 	"../topo"
-	"incubator/network"
+	"errors"
+	"fmt"
 )
 
 var (
@@ -83,12 +83,12 @@ func (this MaybeLayer) Right() Layer {
 
 type CommonLayer struct {
 	space                    string
-	layer                    int32
+	id                       int32
 	messageClassToType       map[int]int32
 	messageCanonicalFromType map[int32]message.RemoteMessage
 	routers                  map[int32]router.Router
 	messageRouters           map[int32]router.Router
-	server network.Server
+	server                   network.Server
 }
 
 func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
@@ -109,7 +109,7 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 		err.Error(errors.New("empty layer space"))
 		return
 	}
-	this.layer = cfg.Layer.Id
+	this.id = cfg.Layer.Id
 	this.space = cfg.Layer.Space
 
 	this.messageRouters = make(map[int32]router.Router)
@@ -124,7 +124,7 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 		}
 
 		msgCanon := message.GetMessagePrototype(msgCfg.Class).Right()
-		msgCanon.SetLayer(int8(this.layer))
+		msgCanon.SetLayer(int8(this.id))
 		msgCanon.SetType(int8(msgCfg.Type))
 
 		this.messageCanonicalFromType[msgCfg.Type] = msgCanon

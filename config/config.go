@@ -62,10 +62,10 @@ type Config struct {
 		//RemoteTable []RemoteEntry `json:"RemoteTable>Entry"`
 	} `json:"Layer"`
 	Server struct {
-		Class string	`json:"Class"`
-		Network string 	`json:"Network"`
-		Address string `json:"Address""`
-		Protocal string	`json:"Protocal""`
+		Class    string `json:"Class"`
+		Network  string `json:"Network"`
+		Address  string `json:"Address""`
+		Protocal string `json:"Protocal""`
 	} `json:"Server"`
 	actors   []*Actor `json:"Actors"`
 	Actors   map[int32]*Actor

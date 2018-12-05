@@ -4,11 +4,11 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
+	"../router"
 	"context"
+	"errors"
 	"fmt"
 	"time"
-	"incubator/router"
-	"errors"
 )
 
 var (
@@ -69,7 +69,7 @@ type commonActor struct {
 	blackBoard
 
 	Topo int32
-	r router.Router
+	r    router.Router
 }
 
 func (this commonActor) GetRouter() (ret router.MaybeRouter) {
@@ -80,7 +80,7 @@ func (this commonActor) GetRouter() (ret router.MaybeRouter) {
 	return
 }
 
-func (this *commonActor) SetRouter(r router.Router) (err maybe.MaybeError){
+func (this *commonActor) SetRouter(r router.Router) (err maybe.MaybeError) {
 	if r == nil {
 		err.Error(errors.New("router is nil"))
 	}

@@ -5,9 +5,9 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
+	"context"
 	"errors"
 	"fmt"
-	"context"
 )
 
 const (
@@ -25,7 +25,7 @@ type dummyRouter struct {
 func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeRouter{}
 
-	actorSchema:=config.GetAttrInt32(attrs, "ActorSchema", config.CheckInt32GT0).Right()
+	actorSchema := config.GetAttrInt32(attrs, "ActorSchema", config.CheckInt32GT0).Right()
 
 	actorCfg, ok := cfg.Actors[actorSchema]
 	if !ok {
@@ -68,6 +68,6 @@ func (this dummyRouter) SimRoute(seed int64, actorsNum int) int64 {
 	return 0
 }
 
-func (this  dummyRouter) GetActors () []actor.Actor{
+func (this dummyRouter) GetActors() []actor.Actor {
 	return []actor.Actor{this.actor}
 }

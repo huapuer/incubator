@@ -4,13 +4,13 @@ import (
 	"../common/maybe"
 	"../config"
 	"../host"
+	"../message"
 	"../persistence"
 	"../serialization"
 	"../storage"
 	"fmt"
-	"../message"
-	"unsafe"
 	"math/rand"
+	"unsafe"
 )
 
 const (
@@ -27,19 +27,20 @@ func init() {
 }
 
 type defaultTopo struct {
-	totalHostNum     int64
+	layer              int32
+	totalHostNum       int64
 	totalRemoteHostNum int32
-	linkRadius       int64
-	localHostMod     int32
-	backupFactor     int32
-	localHostSchema  int32
-	linkSchema       int32
-	localHosts       storage.DenseTable
-	links            storage.DenseTable
-	remoteHosts      []host.Host
-	remoteNum        int32
-	localHostCanon   host.Host
-	linkCanon        host.Host
+	linkRadius         int64
+	localHostMod       int32
+	backupFactor       int32
+	localHostSchema    int32
+	linkSchema         int32
+	localHosts         storage.DenseTable
+	links              storage.DenseTable
+	remoteHosts        []host.Host
+	remoteNum          int32
+	localHostCanon     host.Host
+	linkCanon          host.Host
 }
 
 func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
@@ -66,9 +67,8 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		remoteHostClass := config.GetAttrString(entry, "RemoteHostClass", config.CheckStringNotEmpty).Right()
 		remoteHostAttr := config.GetAttrMapEface(entry, "Attributes").Right()
 
-		h :=  host.GetHostPrototype(remoteHostClass).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right()
+		h := host.GetHostPrototype(remoteHostClass).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right()
 		h.SetId(int64(i))
-		h.(host.HealthManager).Start()
 
 		topo.remoteHosts = append(topo.remoteHosts, h)
 	}
@@ -129,10 +129,10 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	entries := make([]*storage.SparseEntry, 0, 0)
 	for _, entryCfg := range linkSparseEntries {
-		keyTo:=config.GetAttrInt64(entryCfg, "KeyTo", config.CheckInt64GT0).Right()
-		offset:=config.GetAttrInt64(entryCfg, "Offset", config.CheckInt64GT0).Right()
-		size:=config.GetAttrInt64(entryCfg, "Size", config.CheckInt64GT0).Right()
-		hashDepth:=config.GetAttrInt32(entryCfg, "Offset", config.CheckInt32GET0).Right()
+		keyTo := config.GetAttrInt64(entryCfg, "KeyTo", config.CheckInt64GT0).Right()
+		offset := config.GetAttrInt64(entryCfg, "Offset", config.CheckInt64GT0).Right()
+		size := config.GetAttrInt64(entryCfg, "Size", config.CheckInt64GT0).Right()
+		hashDepth := config.GetAttrInt32(entryCfg, "Offset", config.CheckInt32GET0).Right()
 
 		entries = append(entries, &storage.SparseEntry{
 			KeyTo:      keyTo,
@@ -143,7 +143,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 
 	linkDenseSize := config.GetAttrInt64(linkCfg.Attributes, "DenseSize", config.CheckInt64GT0).Right()
-	linkHashDepth:=config.GetAttrInt32(linkCfg.Attributes, "HashDepth", config.CheckInt32GET0).Right()
+	linkHashDepth := config.GetAttrInt32(linkCfg.Attributes, "HashDepth", config.CheckInt32GET0).Right()
 
 	if cfg.Layer.Recover {
 		topo.localHosts = storage.NewDenseTable(
@@ -177,6 +177,10 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
+func (this defaultTopo) GetRemoteHostId(idx int32) int64 {
+	return int64(idx) + int64(this.totalRemoteHostNum)*rand.Int63n(this.totalHostNum/int64(this.totalRemoteHostNum))
+}
+
 //go:noescape
 func (this defaultTopo) SendToHost(id int64, msg message.RemoteMessage) (err maybe.MaybeError) {
 	mod := int32(id % (int64(this.remoteNum)))
@@ -194,7 +198,7 @@ func (this defaultTopo) SendToHost(id int64, msg message.RemoteMessage) (err may
 		}
 
 		realhost := h
-		if mod + int32(i) == this.localHostMod || mod + int32(i) < this.localHostMod+this.backupFactor {
+		if mod+int32(i) == this.localHostMod || mod+int32(i) < this.localHostMod+this.backupFactor {
 			idx := int32(id/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
 			if idx > int32(this.localHosts.ElemLen()) {
 				err.Error(fmt.Errorf("master id exceeds local host range: %d", id))
@@ -206,13 +210,18 @@ func (this defaultTopo) SendToHost(id int64, msg message.RemoteMessage) (err may
 			serialization.Ptr2IFace(&h, ptr)
 
 			realhost = h
+			msg.SetHostId(h.GetId())
+		} else {
+			msg.SetHostId(this.GetRemoteHostId(int32(realhost.GetId())))
 		}
+
 		if !masterSended {
 			msg.Master(message.MASTER_YES)
 			masterSended = true
 		} else {
 			msg.Master(message.MASTER_NO)
 		}
+
 		realhost.Receive(msg).Test()
 	}
 
@@ -334,6 +343,19 @@ func (this *defaultTopo) AddHost(host.Host) maybe.MaybeError {
 	panic("not implemented")
 }
 
-func (this defaultTopo) GetRemoteHostId(idx int32) int64 {
-	return int64(idx) + int64(this.totalRemoteHostNum)*rand.Int63n(this.totalHostNum / int64(this.totalRemoteHostNum))
+func (this defaultTopo) Start() {
+	for _, h := range this.remoteHosts {
+		if hm, ok := h.(host.HealthManager); ok {
+			hm.SetLayer(this.layer)
+			hm.Start().Test()
+		}
+	}
+}
+
+func (this defaultTopo) GetLayer() int32 {
+	return this.layer
+}
+
+func (this *defaultTopo) SetLayer(layer int32) {
+	this.layer = layer
 }

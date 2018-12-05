@@ -1,9 +1,9 @@
 package protocal
 
 import (
+	"../common/maybe"
+	"../config"
 	"../message"
-	"incubator/config"
-	"incubator/common/maybe"
 	"fmt"
 )
 

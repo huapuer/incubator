@@ -1,11 +1,11 @@
 package router
 
 import (
+	"../actor"
 	"../common/maybe"
 	"../config"
 	"../message"
 	"fmt"
-	"incubator/actor"
 )
 
 var (

@@ -4,10 +4,10 @@ import (
 	"../actor"
 	"../common/maybe"
 	"../config"
+	"../layer"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"../layer"
 	"unsafe"
 )
 
@@ -61,14 +61,14 @@ func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 		func() {
 			this.info.cfg.Process().Test()
 			layer.GetLayer(this.info.cfg.Layer.Id).Right().Start()
-			
+
 			rMsg.info.msg = "ok"
 		},
 		func(err error) {
 			rMsg.info.msg = fmt.Sprintf("%s", err)
 		})
 
-	SendToHost(rMsg, int32(this.GetLayer()), this.GetHostId()).Test()
+	SendToHost(rMsg).Test()
 
 	return
 }

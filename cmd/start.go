@@ -2,15 +2,17 @@ package main
 
 import (
 	"../config"
+	"../layer"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"incubator/layer"
 )
 
 func main() {
+	//TODO: init log module
+
 	recover := flag.Bool("recover", false, "recover")
 	flag.Parse()
 

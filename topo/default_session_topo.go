@@ -4,8 +4,8 @@ import (
 	"../common/maybe"
 	"../config"
 	"../host"
-	"fmt"
 	"../message"
+	"fmt"
 	"net"
 	"unsafe"
 )
@@ -86,5 +86,17 @@ func (this defaultSessionTopo) GetRemoteHosts() []host.Host {
 }
 
 func (this defaultSessionTopo) GetRemoteHostId(idx int32) int64 {
+	panic("not implemented")
+}
+
+func (this defaultSessionTopo) Start() {
+	panic("not implemented")
+}
+
+func (this defaultSessionTopo) GetLayer() int32 {
+	panic("not implemented")
+}
+
+func (this *defaultSessionTopo) SetLayer(layer int32) {
 	panic("not implemented")
 }

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"incubator/common/maybe"
+	"../common/maybe"
 	"fmt"
 )
 
@@ -68,14 +68,14 @@ func CheckStringNotEmpty(key string, val string) (err maybe.MaybeError) {
 	return
 }
 
-func GetAttrsMap(attrs interface{},key string) (ret maybe.MaybeEface) {
-	if attrs == nil{
+func GetAttrsMap(attrs interface{}, key string) (ret maybe.MaybeEface) {
+	if attrs == nil {
 		ret.Error(fmt.Errorf("attrs is nil when gettring attr: %s", key))
 		return
 	}
 
 	val, ok := attrs.(map[string]interface{})
-	if !ok{
+	if !ok {
 		ret.Error(fmt.Errorf("illegal attrs(expecting map[string]interface{} when getting attr: %s", key))
 		return
 	}

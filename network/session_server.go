@@ -2,14 +2,14 @@ package network
 
 import (
 	"../common/maybe"
+	"../config"
 	"../layer"
 	"../message"
+	"../protocal"
 	"../serialization"
 	"../topo"
 	"math/rand"
 	"net"
-	"incubator/config"
-	"incubator/protocal"
 )
 
 const (
@@ -28,9 +28,9 @@ func (this sessionServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeServer{}
 	s := &sessionServer{
 		commonServer{
-			network:cfg.Server.Network,
-			address:cfg.Server.Address,
-			p: protocal.GetProtocalPrototype(cfg.Server.Protocal).Right(),
+			network: cfg.Server.Network,
+			address: cfg.Server.Address,
+			p:       protocal.GetProtocalPrototype(cfg.Server.Protocal).Right(),
 		},
 	}
 	s.Inherit(s)

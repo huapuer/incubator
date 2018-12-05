@@ -4,8 +4,8 @@ import (
 	"../common/maybe"
 	"../config"
 	"../host"
-	"fmt"
 	"../message"
+	"fmt"
 	"net"
 	"unsafe"
 )
@@ -40,6 +40,9 @@ type Topo interface {
 	TraverseOutLinksOfHost(int64, func(ptr unsafe.Pointer) bool) maybe.MaybeError
 	GetRemoteHosts() []host.Host
 	LookupHost(int64) host.MaybeHost
+	Start()
+	GetLayer() int32
+	SetLayer(int32)
 	GetRemoteHostId(int32) int64
 }
 

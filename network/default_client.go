@@ -18,7 +18,7 @@ type defaultClient struct {
 	maxIdle int32
 	maxBusy int32
 	timeout int64
-	pool connectionPool
+	pool    connectionPool
 }
 
 type MaybeDefualtClient struct {
@@ -50,14 +50,14 @@ func (this *defaultClient) New(attrs interface{}, cfg config.Config) config.IOC 
 	this.timeout = config.GetAttrInt64(attrs, "Timeout", config.CheckInt64GT0).Right()
 
 	ret.Value(&defaultClient{
-		maxIdle:config.GetAttrInt32(attrs, "MaxIdle", config.CheckInt32GT0).Right(),
-		maxBusy:config.GetAttrInt32(attrs, "MaxBusy", config.CheckInt32GT0).Right(),
-		timeout:config.GetAttrInt64(attrs, "Timeout", config.CheckInt64GT0).Right(),
+		maxIdle: config.GetAttrInt32(attrs, "MaxIdle", config.CheckInt32GT0).Right(),
+		maxBusy: config.GetAttrInt32(attrs, "MaxBusy", config.CheckInt32GT0).Right(),
+		timeout: config.GetAttrInt64(attrs, "Timeout", config.CheckInt64GT0).Right(),
 	})
 	return ret
 }
 
-func (this *defaultClient) Connect (addr string) {
+func (this *defaultClient) Connect(addr string) {
 	this.pool = NewConnectionPool(addr, this.maxIdle, this.maxBusy, time.Duration(this.timeout)).Right()
 }
 
