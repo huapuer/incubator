@@ -8,8 +8,11 @@ import (
 	"../persistence"
 	"../serialization"
 	"../storage"
+	"errors"
 	"fmt"
+	"github.com/incubator/global"
 	"math/rand"
+	"net"
 	"unsafe"
 )
 
@@ -41,9 +44,32 @@ type defaultTopo struct {
 	remoteNum          int32
 	localHostCanon     host.Host
 	linkCanon          host.Host
+	addr               string
+}
+
+func getIntranetIp() (ret maybe.MaybeString) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		ret.Error(err)
+		return
+	}
+
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				ret.Value(ipnet.IP.String())
+				return
+			}
+		}
+	}
+
+	ret.Error(errors.New("internal ip not found"))
+	return
 }
 
 func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
+	interalIP := getIntranetIp().Right()
+
 	ret := MaybeTopo{}
 	topo := &defaultTopo{
 		remoteHosts: make([]host.Host, 0, 0),
@@ -51,7 +77,6 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	topo.totalHostNum = config.GetAttrInt64(attrs, "TotalHostNum", config.CheckInt64GT0).Right()
 	topo.linkRadius = config.GetAttrInt64(attrs, "LinkRadius", config.CheckInt64GT0).Right()
-	topo.localHostMod = config.GetAttrInt32(attrs, "LocalHostMod", config.CheckInt32GT0).Right()
 	topo.backupFactor = config.GetAttrInt32(attrs, "BackupFactor", config.CheckInt32GT0).Right()
 	topo.localHostSchema = config.GetAttrInt32(attrs, "LocalHostSchema", config.CheckInt32GT0).Right()
 
@@ -63,14 +88,26 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 		return ret
 	}
 
+	topo.localHostMod = -1
 	for i, entry := range remoteEntries {
 		remoteHostClass := config.GetAttrString(entry, "RemoteHostClass", config.CheckStringNotEmpty).Right()
 		remoteHostAttr := config.GetAttrMapEface(entry, "Attributes").Right()
+
+		ip := config.GetAttrString(remoteHostAttr, "IP", config.CheckStringNotEmpty).Right()
+		port := config.GetAttrInt(attrs, "Port", config.CheckIntGT0).Right()
+		if ip == interalIP && port == global.NodePort {
+			topo.localHostMod = int32(i)
+			topo.addr = fmt.Sprint("%s:%d", ip, port)
+		}
 
 		h := host.GetHostPrototype(remoteHostClass).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right()
 		h.SetId(int64(i))
 
 		topo.remoteHosts = append(topo.remoteHosts, h)
+	}
+	if topo.localHostMod == -1 {
+		ret.Error(errors.New("internal IP not in remote hosts IPs"))
+		return ret
 	}
 	topo.totalRemoteHostNum = int32(len(remoteEntries))
 
@@ -358,4 +395,8 @@ func (this defaultTopo) GetLayer() int32 {
 
 func (this *defaultTopo) SetLayer(layer int32) {
 	this.layer = layer
+}
+
+func (this defaultTopo) GetAddr() string {
+	return this.addr
 }

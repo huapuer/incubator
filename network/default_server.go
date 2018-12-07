@@ -27,7 +27,7 @@ func (this defaultServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	s := &defaultServer{
 		commonServer{
 			network: cfg.Server.Network,
-			address: cfg.Server.Address,
+			port:    cfg.Server.Port,
 			p:       protocal.GetProtocalPrototype(cfg.Server.Protocal).Right(),
 		},
 	}

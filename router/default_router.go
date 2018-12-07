@@ -58,7 +58,9 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 
 func (this defaultRouter) Start() {
 	for _, actor := range this.actors {
-		actor.Start(context.Background()).Test()
+		ctx, cancel := context.WithCancel(context.Background())
+		actor.SetCancelFunc(cancel)
+		actor.Start(ctx).Test()
 	}
 }
 
@@ -81,4 +83,10 @@ func (this defaultRouter) SimRoute(seed int64, actorsNum int) int64 {
 
 func (this defaultRouter) GetActors() []actor.Actor {
 	return this.actors
+}
+
+func (this defaultRouter) Stop() {
+	for _, actor := range this.actors {
+		actor.Stop()
+	}
 }

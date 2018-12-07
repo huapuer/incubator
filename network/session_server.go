@@ -29,7 +29,7 @@ func (this sessionServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	s := &sessionServer{
 		commonServer{
 			network: cfg.Server.Network,
-			address: cfg.Server.Address,
+			port:    cfg.Server.Port,
 			p:       protocal.GetProtocalPrototype(cfg.Server.Protocal).Right(),
 		},
 	}

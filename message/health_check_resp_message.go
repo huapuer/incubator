@@ -5,6 +5,8 @@ import (
 	"../common/maybe"
 	"../host"
 	"../layer"
+	"github.com/incubator/serialization"
+	"net"
 	"unsafe"
 )
 
@@ -26,17 +28,38 @@ func init() {
 type HealthCheckRespMessage struct {
 	commonMessage
 
-	health bool
+	version int64
+	health  bool
+
+	addr string
 }
 
 func (this *HealthCheckRespMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+	l := layer.GetLayer(int32(this.GetLayer())).Right()
 	if this.health {
-		layer.GetLayer(int32(this.GetLayer())).
-			Right().GetTopo().LookupHost(this.GetHostId()).
+		l.GetTopo().LookupHost(this.GetHostId()).
 			Right().(host.HealthManager).Health()
 	} else {
-		//TODO: send the recover pullup_message
-		//TODO: and need the topo recovery facility to support (topo version)
+		msg := &PullUpMessage{
+			Version: this.version,
+			Cfg:     l.GetConfig(),
+		}
+		msg.SetLayer(int8(l.GetSuperLayer()))
+
+		sl := layer.GetLayer(l.GetSuperLayer()).Right()
+		msg.SetType(int8(sl.GetMessageType(msg).Right()))
+
+		conn, e := net.Dial("tcp", this.addr)
+		if e != nil {
+			err.Error(e)
+			return
+		}
+
+		_, e = conn.Write(serialization.Marshal(msg))
+		if e != nil {
+			err.Error(e)
+			return
+		}
 	}
 	err.Error(nil)
 	return

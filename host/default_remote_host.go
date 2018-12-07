@@ -34,7 +34,8 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 	ret := MaybeHost{}
 
 	clientSchema := config.GetAttrInt32(attrs, "ClientSchema", nil).Right()
-	addr := config.GetAttrString(attrs, "Address", config.CheckStringNotEmpty).Right()
+	ip := config.GetAttrString(attrs, "IP", config.CheckStringNotEmpty).Right()
+	port := config.GetAttrInt(attrs, "Port", config.CheckIntGT0).Right()
 	checkIntvl := config.GetAttrInt64(attrs, "CheckIntvl", config.CheckInt64GT0).Right()
 	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
 
@@ -52,7 +53,7 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 			heartbeatIntvl: time.Duration(heartbeatIntvl),
 		},
 	}
-	host.client.Connect(addr)
+	host.client.Connect(fmt.Sprint("%s:%d", ip, port))
 
 	ret.Value(host)
 	return ret

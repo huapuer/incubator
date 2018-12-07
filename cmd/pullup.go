@@ -24,7 +24,6 @@ func main() {
 	nodesFile := flag.String("nodes-file", "", "nodes file")
 	groundLayerFile := flag.String("ground-layer-file", "", "ground layer file")
 	layerFile := flag.String("layer-file", "", "layer file")
-	recover := flag.Bool("recover", false, "recover")
 	flag.Parse()
 
 	if *layerId < 1 {
@@ -63,7 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 	cfg.Layer.Id = int32(*layerId)
-	cfg.Layer.Recover = *recover
+	cfg.Layer.Recover = false
 
 	file, e = ioutil.ReadFile(*nodesFile)
 	if e != nil {
@@ -85,12 +84,11 @@ func main() {
 				os.Exit(1)
 			}
 
-			msg := &message.PullUpMessage{}
+			msg := &message.PullUpMessage{
+				Cfg: &cfg,
+			}
 			msg.SetLayer(int8(groudCfg.Layer.Id))
 			msg.SetType(int8(groundLayer.GetMessageType(msg).Right()))
-
-			msg.SetAddr(node.Address)
-			msg.SetCfg(&cfg)
 
 			_, e = conn.Write(serialization.Marshal(msg))
 			if e != nil {

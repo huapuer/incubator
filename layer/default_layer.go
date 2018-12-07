@@ -65,3 +65,9 @@ func (this defaultLayer) GetTopo() topo.Topo {
 func (this defaultLayer) GetServer() network.Server {
 	return this.server
 }
+
+func (this defaultLayer) Stop() {
+	for _, r := range this.routers {
+		r.Stop()
+	}
+}

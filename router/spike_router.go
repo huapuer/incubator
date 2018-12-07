@@ -60,3 +60,7 @@ func (this spikeRouter) SimRoute(seed int64, actorsNum int) int64 {
 func (this spikeRouter) GetActors() []actor.Actor {
 	return this.router.GetActors()
 }
+
+func (this spikeRouter) Stop() {
+	this.router.Stop()
+}

@@ -44,6 +44,7 @@ type Topo interface {
 	GetLayer() int32
 	SetLayer(int32)
 	GetRemoteHostId(int32) int64
+	GetAddr() string
 }
 
 type MaybeTopo struct {

@@ -41,11 +41,14 @@ func (this *HealthCheckReqMessage) Process(runner actor.Actor) (err maybe.MaybeE
 		health = time.Now().Unix()-healthTil <= healthIntvl
 	}
 
+	l := layer.GetLayer(int32(this.GetLayer())).Right()
+
 	rMsg := &HealthCheckRespMessage{
-		health: health,
+		addr:    l.GetTopo().GetAddr(),
+		version: l.GetVersion(),
+		health:  health,
 	}
 
-	l := layer.GetLayer(int32(this.GetLayer())).Right()
 	rMsg.SetType(int8(l.GetMessageType(rMsg).Right()))
 	rMsg.SetLayer(this.GetSrcLayer())
 	rMsg.SetHostId(this.GetSrcHostId())

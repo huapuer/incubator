@@ -29,38 +29,37 @@ func init() {
 type PullUpMessage struct {
 	commonMessage
 
-	info struct {
-		addr string
-		cfg  *config.Config
-	}
-}
-
-func (this *PullUpMessage) SetAddr(addr string) {
-	this.info.addr = addr
-}
-
-func (this *PullUpMessage) SetCfg(cfg *config.Config) {
-	this.info.cfg = cfg
+	Version int64
+	Cfg     *config.Config
 }
 
 func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
-	if this.info.cfg == nil {
+	if this.Cfg == nil {
 		err.Error(errors.New("cfg is nil"))
 		return
+	}
+
+	l := layer.GetLayer(int32(this.GetLayer())).Right()
+
+	if this.Cfg.Layer.Recover == true {
+		if l.GetVersion() != this.Version {
+			err.Error(
+				fmt.Errorf("layer version unmatch: origin=%d, expect=%d", l.GetVersion(), this.Version))
+			return
+		}
 	}
 
 	rMsg := &NodeResultMessage{}
 	rMsg.SetLayer(this.GetLayer())
 
-	l := layer.GetLayer(int32(this.GetLayer())).Right()
 	rMsg.SetType(int8(l.GetMessageType(rMsg).Right()))
 
 	rMsg.SetHostId(this.GetHostId())
 
 	maybe.TryCatch(
 		func() {
-			this.info.cfg.Process().Test()
-			layer.GetLayer(this.info.cfg.Layer.Id).Right().Start()
+			this.Cfg.Process().Test()
+			layer.GetLayer(this.Cfg.Layer.Id).Right().Start()
 
 			rMsg.info.msg = "ok"
 		},
@@ -74,7 +73,7 @@ func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 }
 
 func (this *PullUpMessage) GetJsonBytes() (ret maybe.MaybeBytes) {
-	bytes, err := json.Marshal(this.info)
+	bytes, err := json.Marshal(this.Cfg)
 	if err != nil {
 		ret.Error(err)
 	} else {
@@ -84,7 +83,7 @@ func (this *PullUpMessage) GetJsonBytes() (ret maybe.MaybeBytes) {
 }
 
 func (this *PullUpMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
-	e := json.Unmarshal(data, this.info)
+	e := json.Unmarshal(data, this.Cfg)
 	if e != nil {
 		err.Error(e)
 	}

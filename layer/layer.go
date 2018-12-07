@@ -10,6 +10,7 @@ import (
 	"../topo"
 	"errors"
 	"fmt"
+	"math/rand"
 )
 
 var (
@@ -26,7 +27,7 @@ func RegisterLayerPrototype(name string, val Layer) (err maybe.MaybeError) {
 	return
 }
 
-func SetLayer(cfg config.Config) (err maybe.MaybeError) {
+func AddLayer(cfg config.Config) (err maybe.MaybeError) {
 	if _, ok := layers[cfg.Layer.Id]; ok {
 		err.Error(fmt.Errorf("layer has been set: %d", cfg.Layer.Id))
 		return
@@ -40,12 +41,25 @@ func SetLayer(cfg config.Config) (err maybe.MaybeError) {
 	return
 }
 
-func GetLayer(layer int32) (ret MaybeLayer) {
-	if layer, ok := layers[layer]; ok {
+func DeleteLayer(id int32) (err maybe.MaybeError) {
+	layer, ok := layers[id]
+	if !ok {
+		err.Error(fmt.Errorf("global layer not found: %d", id))
+		return
+	}
+	layer.Stop()
+	delete(layers, id)
+
+	err.Error(nil)
+	return
+}
+
+func GetLayer(id int32) (ret MaybeLayer) {
+	if layer, ok := layers[id]; ok {
 		ret.Value(layer)
 		return
 	}
-	ret.Error(fmt.Errorf("global layer not found: %d", layer))
+	ret.Error(fmt.Errorf("global layer not found: %d", id))
 	return
 }
 
@@ -58,6 +72,10 @@ type Layer interface {
 	Start()
 	GetTopo() topo.Topo
 	GetServer() network.Server
+	Stop()
+	GetConfig() *config.Config
+	GetVersion() int64
+	GetSuperLayer() int32
 }
 
 type MaybeLayer struct {
@@ -89,6 +107,9 @@ type CommonLayer struct {
 	routers                  map[int32]router.Router
 	messageRouters           map[int32]router.Router
 	server                   network.Server
+	cfg                      *config.Config
+	version                  int64
+	superLayer               int32
 }
 
 func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
@@ -100,15 +121,11 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 		err.Error(fmt.Errorf("illegal layer id: %d", cfg.Layer.Id))
 		return
 	}
+	if cfg.Layer.SuperLayer < 0 {
+		err.Error(fmt.Errorf("illegal supervisor layer id: %d", cfg.Layer.SupervisorLayer))
+		return
+	}
 
-	if cfg.Layer.Id <= 0 {
-		err.Error(fmt.Errorf("illegal layer layer: %d", cfg.Layer.Id))
-		return
-	}
-	if cfg.Layer.Space == "" {
-		err.Error(errors.New("empty layer space"))
-		return
-	}
 	this.id = cfg.Layer.Id
 	this.space = cfg.Layer.Space
 
@@ -145,6 +162,10 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 		this.messageRouters[msgCfg.Type] = r
 	}
 
+	this.superLayer = cfg.Layer.SuperLayer
+	this.cfg = &cfg
+	this.version = rand.Int63()
+
 	err.Error(nil)
 	return
 }
@@ -176,4 +197,16 @@ func (this CommonLayer) GetMessageCanonicalFromType(typ int32) (ret message.Mayb
 	}
 	ret.Error(fmt.Errorf("message canonical from type not found: %d", typ))
 	return
+}
+
+func (this CommonLayer) GetConfig() *config.Config {
+	return this.cfg
+}
+
+func (this CommonLayer) GetVersion() int64 {
+	return this.version
+}
+
+func (this CommonLayer) GetSuperLayer() int32 {
+	return this.superLayer
 }

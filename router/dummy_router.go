@@ -49,7 +49,9 @@ func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 }
 
 func (this dummyRouter) Start() {
-	this.actor.Start(context.Background()).Test()
+	ctx, cancel := context.WithCancel(context.Background())
+	this.actor.SetCancelFunc(cancel)
+	this.actor.Start(ctx).Test()
 }
 
 //go:noescape
@@ -70,4 +72,8 @@ func (this dummyRouter) SimRoute(seed int64, actorsNum int) int64 {
 
 func (this dummyRouter) GetActors() []actor.Actor {
 	return []actor.Actor{this.actor}
+}
+
+func (this dummyRouter) Stop() {
+	this.actor.Stop()
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/incubator/global"
 	"math/rand"
 	"net"
 	"time"
@@ -70,7 +71,7 @@ type commonServer struct {
 	class.Class
 
 	network        string
-	address        string
+	port           int
 	readBufferSize int
 	packageBuffer  []byte
 	packageSize    int
@@ -80,15 +81,24 @@ type commonServer struct {
 }
 
 func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
-	this.packageBuffer = make([]byte, this.readBufferSize, 0)
+	if global.NodePort != 0 {
+		err.Error(fmt.Errorf("server already start at %d", global.NodePort))
+		return
+	}
 
 	if this.network == "" {
 		err.Error(errors.New("not network provided"))
+		return
 	}
-	if this.address == "" {
-		err.Error(errors.New("no address provided"))
+	if this.port <= 0 {
+		err.Error(fmt.Errorf("illegal listen port: %d", this.port))
+		return
 	}
-	l, e := net.Listen(this.network, this.address)
+	global.NodePort = this.port
+
+	this.packageBuffer = make([]byte, this.readBufferSize, 0)
+
+	l, e := net.Listen(this.network, fmt.Sprint("%s:%d", "0.0.0.0", this.port))
 	if e != nil {
 		err.Error(e)
 		return

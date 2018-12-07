@@ -37,6 +37,7 @@ type Router interface {
 	Route(message.RemoteMessage) maybe.MaybeError
 	SimRoute(int64, int) int64
 	GetActors() []actor.Actor
+	Stop()
 }
 
 type MaybeRouter struct {

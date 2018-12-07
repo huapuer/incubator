@@ -100,3 +100,7 @@ func (this defaultSessionTopo) GetLayer() int32 {
 func (this *defaultSessionTopo) SetLayer(layer int32) {
 	panic("not implemented")
 }
+
+func (this defaultSessionTopo) GetAddr() string {
+	panic("not implemented")
+}

@@ -44,6 +44,8 @@ type Actor interface {
 	SetState(Actor, string, interface{}, time.Duration, func(Actor)) maybe.MaybeError
 	GetRouter() router.MaybeRouter
 	SetRouter(router router.Router) maybe.MaybeError
+	SetCancelFunc(context.CancelFunc)
+	Stop()
 }
 
 type MaybeActor struct {
@@ -68,8 +70,9 @@ func (this MaybeActor) Right() Actor {
 type commonActor struct {
 	blackBoard
 
-	Topo int32
-	r    router.Router
+	Topo   int32
+	r      router.Router
+	cancel context.CancelFunc
 }
 
 func (this commonActor) GetRouter() (ret router.MaybeRouter) {
@@ -87,4 +90,12 @@ func (this *commonActor) SetRouter(r router.Router) (err maybe.MaybeError) {
 	this.r = r
 	err.Error(nil)
 	return
+}
+
+func (this *commonActor) SetCancelFunc(cancel context.CancelFunc) {
+	this.cancel = cancel
+}
+
+func (this commonActor) Stop() {
+	this.cancel()
 }

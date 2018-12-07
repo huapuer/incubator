@@ -4,6 +4,8 @@ import (
 	"../common/maybe"
 	"../layer"
 	"fmt"
+	"runtime"
+	"time"
 )
 
 type Actor struct {
@@ -54,6 +56,7 @@ type Config struct {
 		Id         int32       `json:"Id"`
 		Recover    bool        `json:"Recover"`
 		Class      string      `json:"Topology"`
+		SuperLayer int32       `json:"SuperLayer"`
 		Attributes interface{} `json:"Attributes"`
 		//LocalHostClass  string `json:"LocalHost"`
 		//RemoteHostClass string `json:"LocalHost"`
@@ -64,7 +67,7 @@ type Config struct {
 	Server struct {
 		Class    string `json:"Class"`
 		Network  string `json:"Network"`
-		Address  string `json:"Address""`
+		Port     int    `json:"Port""`
 		Protocal string `json:"Protocal""`
 	} `json:"Server"`
 	actors   []*Actor `json:"Actors"`
@@ -165,7 +168,14 @@ func (this *Config) init() (err maybe.MaybeError) {
 
 func (this *Config) Process() (err maybe.MaybeError) {
 	this.init().Test()
-	layer.SetLayer(*this).Test()
+
+	if this.Layer.Recover {
+		layer.DeleteLayer(this.Layer.Id).Test()
+		runtime.GC()
+		time.Sleep(10 * time.Second)
+	}
+
+	layer.AddLayer(*this).Test()
 
 	err.Error(nil)
 	return
