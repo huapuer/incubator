@@ -38,15 +38,15 @@ func main() {
 	}
 	fmt.Printf("%s\n", string(file))
 
-	groudCfg := config.Config{}
-	e = json.Unmarshal(file, &groudCfg)
+	groundCfg := config.Config{}
+	e = json.Unmarshal(file, &groundCfg)
 	if e != nil {
 		fmt.Printf("Config error: %v\n", e)
 		os.Exit(1)
 	}
-	groudCfg.Process().Test()
+	groundCfg.Process().Test()
 
-	groundLayer := layer.GetLayer(groudCfg.Layer.Id).Right()
+	groundLayer := layer.GetLayer(groundCfg.Layer.Id).Right()
 
 	file, e = ioutil.ReadFile(*layerFile)
 	if e != nil {
@@ -87,7 +87,7 @@ func main() {
 			msg := &message.PullUpMessage{
 				Cfg: &cfg,
 			}
-			msg.SetLayer(int8(groudCfg.Layer.Id))
+			msg.SetLayer(int8(groundCfg.Layer.Id))
 			msg.SetType(int8(groundLayer.GetMessageType(msg).Right()))
 
 			_, e = conn.Write(serialization.Marshal(msg))
@@ -98,6 +98,7 @@ func main() {
 
 			groundLayer.GetServer().HandleConnection(context.Background(), conn)
 
+			conn.Close()
 			wg.Done()
 		}()
 	}

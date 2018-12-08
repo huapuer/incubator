@@ -10,6 +10,7 @@ import (
 	"../topo"
 	"errors"
 	"fmt"
+	"github.com/incubator/io"
 	"math/rand"
 )
 
@@ -110,6 +111,7 @@ type CommonLayer struct {
 	cfg                      *config.Config
 	version                  int64
 	superLayer               int32
+	io                       io.IO
 }
 
 func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
@@ -122,7 +124,7 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 		return
 	}
 	if cfg.Layer.SuperLayer < 0 {
-		err.Error(fmt.Errorf("illegal supervisor layer id: %d", cfg.Layer.SupervisorLayer))
+		err.Error(fmt.Errorf("illegal supervisor layer id: %d", cfg.Layer.SuperLayer))
 		return
 	}
 
@@ -160,6 +162,10 @@ func (this *CommonLayer) Init(attrs interface{}, cfg config.Config) (err maybe.M
 				Right().New(routerCfg.Attributes, cfg).(router.MaybeRouter).Right()
 		}
 		this.messageRouters[msgCfg.Type] = r
+	}
+
+	if cfg.IO.Class != "" {
+		this.io = io.GetIOPrototype(cfg.IO.Class).Right().New(cfg.IO.Attributes, cfg).(io.MaybeIO).Right()
 	}
 
 	this.superLayer = cfg.Layer.SuperLayer

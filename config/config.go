@@ -70,6 +70,10 @@ type Config struct {
 		Port     int    `json:"Port""`
 		Protocal string `json:"Protocal""`
 	} `json:"Server"`
+	IO struct {
+		Class      string `json:"Class"`
+		Attributes interface{}
+	}
 	actors   []*Actor `json:"Actors"`
 	Actors   map[int32]*Actor
 	routers  []*Router `json:"Routers"`
