@@ -56,12 +56,17 @@ func (this defaultIO) New(attrs interface{}, cfg config.Config) config.IOC {
 			return ret
 		}
 
-		clientAttr := config.GetAttrMapEface(jointCfg, "Client").Right()
+		clientSchema := config.GetAttrInt32(jointCfg, "ClientSchema", nil).Right()
+		clientCfg, ok := cfg.Clients[clientSchema]
+		if !ok {
+			ret.Error(fmt.Errorf("client cfg not found: %d", clientSchema))
+			return ret
+		}
 
 		j := joint{
 			begin:  begin,
 			end:    end,
-			client: network.DefaultClient.New(clientAttr, cfg).(network.MaybeDefualtClient).Right(),
+			client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),
 		}
 		value.inputJoints = append(value.inputJoints, j)
 	}

@@ -72,7 +72,7 @@ type Layer interface {
 	GetMessageCanonicalFromType(int32) message.MaybeRemoteMessage
 	Start()
 	GetTopo() topo.Topo
-	GetServer() network.Server
+	GetService(int32) network.MaybeServer
 	Stop()
 	GetConfig() *config.Config
 	GetVersion() int64
@@ -107,7 +107,7 @@ type CommonLayer struct {
 	messageCanonicalFromType map[int32]message.RemoteMessage
 	routers                  map[int32]router.Router
 	messageRouters           map[int32]router.Router
-	server                   network.Server
+	services                 []network.Server
 	cfg                      *config.Config
 	version                  int64
 	superLayer               int32

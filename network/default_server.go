@@ -24,11 +24,18 @@ type defaultServer struct {
 
 func (this defaultServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeServer{}
+
+	network := config.GetAttrString(attrs, "Network", config.CheckStringNotEmpty).Right()
+	port := config.GetAttrInt(attrs, "Port", config.CheckIntGT0).Right()
+	handlerNum := config.GetAttrInt(attrs, "HandlerNum", config.CheckIntGT0).Right()
+	protocalClass := config.GetAttrString(attrs, "Protocal", config.CheckStringNotEmpty).Right()
+
 	s := &defaultServer{
 		commonServer{
-			network: cfg.Server.Network,
-			port:    cfg.Server.Port,
-			p:       protocal.GetProtocalPrototype(cfg.Server.Protocal).Right(),
+			network:    network,
+			port:       port,
+			handlerNum: handlerNum,
+			p:          protocal.GetProtocalPrototype(protocalClass).Right(),
 		},
 	}
 	s.Inherit(s)

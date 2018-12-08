@@ -78,6 +78,7 @@ type commonServer struct {
 	headerSize     int
 	p              protocal.Protocal
 	derived        Server
+	handlerNum     int
 }
 
 func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
@@ -94,6 +95,11 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 		err.Error(fmt.Errorf("illegal listen port: %d", this.port))
 		return
 	}
+	if this.handlerNum <= 0 {
+		err.Error(fmt.Errorf("illegal handler num: %d", this.handlerNum))
+		return
+	}
+
 	global.NodePort = this.port
 
 	this.packageBuffer = make([]byte, this.readBufferSize, 0)
@@ -117,7 +123,9 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 			return
 		}
 		maybe.TryCatch(func() {
-			go this.HandleConnection(ctx, c)
+			for i := 0; i < this.handlerNum; i++ {
+				go this.HandleConnection(ctx, c)
+			}
 		}, nil)
 	}
 }

@@ -41,8 +41,14 @@ func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	layer.topo = topo.GetTopoPrototype(topoCfg.Class).Right().New(topoCfg.Attributes, cfg).(topo.Topo)
 
-	if cfg.Server.Class != "" {
-		this.server = network.GetServerPrototype(cfg.Server.Class).Right().New(nil, cfg).(network.Server)
+	this.services = make([]network.Server, 0, 0)
+	for _, service := range cfg.Services {
+		serverCfg, ok := cfg.Servers[service.ServerSchema]
+		if !ok {
+			ret.Error(fmt.Errorf("server config not found for schema: %d", service.ServerSchema))
+			return ret
+		}
+		this.services = append(this.services, network.GetServerPrototype(serverCfg.Class).Right().New(serverCfg.Attributes, cfg).(network.Server))
 	}
 
 	ret.Value(layer)
@@ -53,7 +59,9 @@ func (this defaultLayer) Start() {
 	for _, r := range this.routers {
 		r.Start()
 	}
-	this.server.Start(context.Background()).Test()
+	for _, s := range this.services {
+		s.Start(context.Background()).Test()
+	}
 	this.topo.SetLayer(this.id)
 	this.topo.Start()
 }
@@ -62,8 +70,13 @@ func (this defaultLayer) GetTopo() topo.Topo {
 	return this.topo
 }
 
-func (this defaultLayer) GetServer() network.Server {
-	return this.server
+func (this defaultLayer) GetService(idx int32) (ret network.MaybeServer) {
+	if idx < 0 || int(idx) > len(this.services) {
+		ret.Error(fmt.Errorf("service not found: %d", idx))
+		return
+	}
+	ret.Value(this.services[idx])
+	return
 }
 
 func (this defaultLayer) Stop() {

@@ -4,7 +4,7 @@ import (
 	"../common/maybe"
 	"../config"
 	"../message"
-	"../serialization"
+	"github.com/incubator/protocal"
 	"time"
 )
 
@@ -19,6 +19,7 @@ type defaultClient struct {
 	maxBusy int32
 	timeout int64
 	pool    connectionPool
+	p       protocal.Protocal
 }
 
 type MaybeDefualtClient struct {
@@ -49,10 +50,14 @@ func (this *defaultClient) New(attrs interface{}, cfg config.Config) config.IOC 
 	this.maxBusy = config.GetAttrInt32(attrs, "MaxBusy", config.CheckInt32GT0).Right()
 	this.timeout = config.GetAttrInt64(attrs, "Timeout", config.CheckInt64GT0).Right()
 
+	protocalStr := config.GetAttrString(attrs, "Protocal", config.CheckStringNotEmpty).Right()
+	protocal := protocal.GetProtocalPrototype(protocalStr).Right()
+
 	ret.Value(&defaultClient{
 		maxIdle: config.GetAttrInt32(attrs, "MaxIdle", config.CheckInt32GT0).Right(),
 		maxBusy: config.GetAttrInt32(attrs, "MaxBusy", config.CheckInt32GT0).Right(),
 		timeout: config.GetAttrInt64(attrs, "Timeout", config.CheckInt64GT0).Right(),
+		p:       protocal,
 	})
 	return ret
 }
@@ -63,7 +68,7 @@ func (this *defaultClient) Connect(addr string) {
 
 //go:noescape
 func (this *defaultClient) Send(msg message.RemoteMessage) (err maybe.MaybeError) {
-	_, e := this.pool.GetConnection().Right().Write(serialization.Marshal(msg))
+	_, e := this.pool.GetConnection().Right().Write(this.p.Pack(msg))
 	if e != nil {
 		err.Error(e)
 	}

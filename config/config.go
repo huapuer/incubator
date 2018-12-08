@@ -44,6 +44,12 @@ type Topo struct {
 	Attributes interface{} `json:"Attributes"`
 }
 
+type Server struct {
+	Schema     int32       `json:"Schema"`
+	Class      string      `json:"Class"`
+	Attributes interface{} `json:"Attributes"`
+}
+
 type Client struct {
 	Schema     int32       `json:"Schema"`
 	Class      string      `json:"Class"`
@@ -64,12 +70,9 @@ type Config struct {
 		//LocalHostMod int32  `json:"LocalHostMod`
 		//RemoteTable []RemoteEntry `json:"RemoteTable>Entry"`
 	} `json:"Layer"`
-	Server struct {
-		Class    string `json:"Class"`
-		Network  string `json:"Network"`
-		Port     int    `json:"Port""`
-		Protocal string `json:"Protocal""`
-	} `json:"Server"`
+	Services []struct {
+		ServerSchema int32 `json:"Server"`
+	} `json:"Services"`
 	IO struct {
 		Class      string `json:"Class"`
 		Attributes interface{}
@@ -86,6 +89,8 @@ type Config struct {
 	Links    map[int32]*Link
 	topos    []*Topo `json:"Topos"`
 	Topos    map[int32]*Topo
+	servers  []*Server `json:"Servers"`
+	Servers  map[int32]*Server
 	clients  []*Client `json:"Clients"`
 	Clients  map[int32]*Client
 }
@@ -155,6 +160,15 @@ func (this *Config) init() (err maybe.MaybeError) {
 			return
 		}
 		this.Topos[t.Schema] = t
+	}
+
+	this.Servers = make(map[int32]*Server)
+	for _, s := range this.servers {
+		if s.Schema < 0 {
+			err.Error(fmt.Errorf("illegal server schema: %d", s.Schema))
+			return
+		}
+		this.Servers[s.Schema] = s
 	}
 
 	this.Clients = make(map[int32]*Client)

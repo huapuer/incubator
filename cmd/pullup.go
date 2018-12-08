@@ -96,7 +96,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			groundLayer.GetServer().HandleConnection(context.Background(), conn)
+			groundLayer.GetService(0).Right().HandleConnection(context.Background(), conn)
 
 			conn.Close()
 			wg.Done()
