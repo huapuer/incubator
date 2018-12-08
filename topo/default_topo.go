@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/incubator/global"
+	"github.com/incubator/layer"
 	"math/rand"
 	"net"
 	"unsafe"
@@ -30,6 +31,8 @@ func init() {
 }
 
 type defaultTopo struct {
+	persistence.CommomPersistentable
+
 	layer              int32
 	totalHostNum       int64
 	totalRemoteHostNum int32
@@ -122,7 +125,9 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	topo.localHostCanon = host.GetHostPrototype(localHostCfg.Class).Right()
 
-	if cfg.Layer.Recover {
+	switch cfg.Layer.StartMode {
+	case config.LAYER_START_MODE_RECOVER:
+		l := layer.GetLayer(cfg.Layer.Id).Right()
 		topo.localHosts = storage.NewDenseTable(
 			topo.localHostCanon.(storage.DenseTableElement),
 			1,
@@ -131,11 +136,28 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.localHostCanon.(host.Host).GetSize(),
 			0,
 			persistence.FromPersistence(
+				persistence.FROM_PERSISTENCE_MODE_RECOVER,
+				topo.GetLoadExpiration(),
+				l.GetVersion(),
 				cfg.Layer.Space,
 				cfg.Layer.Id,
-				LocalHostPersistentClass,
-				0).Right()).Right()
-	} else {
+				LocalHostPersistentClass).Right()).Right()
+	case config.LAYER_START_MODE_REBOOT:
+		topo.localHosts = storage.NewDenseTable(
+			topo.localHostCanon.(storage.DenseTableElement),
+			1,
+			topo.totalHostNum/int64(topo.remoteNum),
+			[]*storage.SparseEntry{},
+			topo.localHostCanon.(host.Host).GetSize(),
+			0,
+			persistence.FromPersistence(
+				persistence.FROM_PERSISTENCE_MODE_RECOVER,
+				0,
+				0,
+				cfg.Layer.Space,
+				cfg.Layer.Id,
+				LocalHostPersistentClass).Right()).Right()
+	case config.LAYER_START_MODE_NEW:
 		topo.localHosts = storage.NewDenseTable(
 			topo.localHostCanon.(storage.DenseTableElement),
 			1,
@@ -153,6 +175,9 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 				topo.localHosts.Put(0, int64(i), serialization.IFace2Ptr(&localHost))
 			}
 		}
+	default:
+		ret.Error(fmt.Errorf("unknown layer start mode: %d", cfg.Layer.StartMode))
+		return ret
 	}
 
 	linkCfg, ok := cfg.Links[topo.linkSchema]
@@ -182,7 +207,9 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	linkDenseSize := config.GetAttrInt64(linkCfg.Attributes, "DenseSize", config.CheckInt64GT0).Right()
 	linkHashDepth := config.GetAttrInt32(linkCfg.Attributes, "HashDepth", config.CheckInt32GET0).Right()
 
-	if cfg.Layer.Recover {
+	switch cfg.Layer.StartMode {
+	case config.LAYER_START_MODE_RECOVER:
+		l := layer.GetLayer(cfg.Layer.Id).Right()
 		topo.localHosts = storage.NewDenseTable(
 			topo.localHostCanon.(storage.DenseTableElement),
 			topo.totalHostNum*int64(topo.backupFactor),
@@ -191,11 +218,28 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.localHostCanon.(host.Host).GetSize(),
 			linkHashDepth,
 			persistence.FromPersistence(
+				persistence.FROM_PERSISTENCE_MODE_RECOVER,
+				topo.GetLoadExpiration(),
+				l.GetVersion(),
 				cfg.Layer.Space,
 				cfg.Layer.Id,
-				LinkPersistentClass,
-				0).Right()).Right()
-	} else {
+				LinkPersistentClass).Right()).Right()
+	case config.LAYER_START_MODE_REBOOT:
+		topo.localHosts = storage.NewDenseTable(
+			topo.localHostCanon.(storage.DenseTableElement),
+			topo.totalHostNum*int64(topo.backupFactor),
+			topo.totalHostNum/int64(topo.remoteNum),
+			entries,
+			topo.localHostCanon.(host.Host).GetSize(),
+			linkHashDepth,
+			persistence.FromPersistence(
+				persistence.FROM_PERSISTENCE_MODE_REBOOT,
+				0,
+				0,
+				cfg.Layer.Space,
+				cfg.Layer.Id,
+				LinkPersistentClass).Right()).Right()
+	case config.LAYER_START_MODE_NEW:
 		topo.links = storage.NewDenseTable(
 			topo.linkCanon.(storage.DenseTableElement),
 			topo.totalHostNum*int64(topo.backupFactor),
@@ -204,14 +248,40 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 			topo.linkCanon.(host.Host).GetSize(),
 			linkHashDepth,
 			nil).Right()
-
-		//TODO: init links
+	default:
+		ret.Error(fmt.Errorf("unknown layer start mode: %d", cfg.Layer.StartMode))
+		return ret
 	}
+
+	//TODO: init links
 
 	//TODO: add potential link
 
 	ret.Value(topo)
 	return ret
+}
+
+func (this defaultTopo) Persistent() (err maybe.MaybeError) {
+	l := layer.GetLayer(this.layer).Right()
+
+	persistence.ToPersistence(
+		this.GetStoreExpiration(),
+		l.GetVersion(),
+		l.GetConfig().Layer.Space,
+		this.layer,
+		LocalHostPersistentClass,
+		this.localHosts.GetBytes()).Test()
+
+	persistence.ToPersistence(
+		this.GetStoreExpiration(),
+		l.GetVersion(),
+		l.GetConfig().Layer.Space,
+		this.layer,
+		LinkPersistentClass,
+		this.links.GetBytes()).Test()
+
+	err.Error(nil)
+	return
 }
 
 func (this defaultTopo) GetRemoteHostId(idx int32) int64 {

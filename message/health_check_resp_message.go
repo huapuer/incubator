@@ -5,6 +5,8 @@ import (
 	"../common/maybe"
 	"../host"
 	"../layer"
+	"errors"
+	"github.com/incubator/config"
 	"github.com/incubator/serialization"
 	"net"
 	"unsafe"
@@ -37,9 +39,16 @@ type HealthCheckRespMessage struct {
 func (this *HealthCheckRespMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 	l := layer.GetLayer(int32(this.GetLayer())).Right()
 	if this.health {
-		l.GetTopo().LookupHost(this.GetHostId()).
-			Right().(host.HealthManager).Health()
+		hm, ok := l.GetTopo().LookupHost(this.GetHostId()).
+			Right().(host.HealthManager)
+		if !ok {
+			err.Error(errors.New("host is not HealthManager"))
+			return
+		}
+		hm.Health()
 	} else {
+		cfg := l.GetConfig()
+		cfg.Layer.StartMode = config.LAYER_START_MODE_RECOVER
 		msg := &PullUpMessage{
 			Version: this.version,
 			Cfg:     l.GetConfig(),

@@ -27,6 +27,7 @@ type DenseTable struct {
 	denseSize     int64
 	sparseEntries []*SparseEntry
 	data          uintptr
+	size          int64
 	elementSize   int32
 	hashDepth     int32
 	elementCanon  DenseTableElement
@@ -115,9 +116,12 @@ func NewDenseTable(elementCanon DenseTableElement,
 		blockSize += entry.Size
 	}
 
+	size := int64(0)
 	if data == nil {
-		totalSize := blocksNum * blockSize * int64(elementSize)
-		data = make([]byte, totalSize, totalSize)
+		size = blocksNum * blockSize * int64(elementSize)
+		data = make([]byte, size, size)
+	} else {
+		size = int64(len(data))
 	}
 
 	this.Value(DenseTable{
@@ -128,8 +132,13 @@ func NewDenseTable(elementCanon DenseTableElement,
 		data:          uintptr(serialization.Bytes2Ptr(data)),
 		elementSize:   elementSize,
 		hashDepth:     hashDepth,
+		size:          size,
 	})
 	return
+}
+
+func (this DenseTable) GetBytes() []byte {
+	return serialization.Ptr2Bytes(unsafe.Pointer(this.data), int(this.size))
 }
 
 func (this *DenseTable) Get(block int64, key int64) (ret MaybePointer) {

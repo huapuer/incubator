@@ -30,7 +30,6 @@ type HealthCheckReqMessage struct {
 }
 
 func (this *HealthCheckReqMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
-
 	router := runner.GetRouter().Right()
 
 	health := true

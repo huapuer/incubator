@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+const (
+	LAYER_START_MODE_NEW = iota
+	LAYER_START_MODE_RECOVER
+	LAYER_START_MODE_REBOOT
+)
+
 type Actor struct {
 	Schema     int32       `json:"Schema"`
 	Class      string      `json:"Class"`
@@ -60,7 +66,7 @@ type Config struct {
 	Layer struct {
 		Space      string      `json:"Space"`
 		Id         int32       `json:"Id"`
-		Recover    bool        `json:"Recover"`
+		StartMode  int         `json:"Recover"`
 		Class      string      `json:"Topology"`
 		SuperLayer int32       `json:"SuperLayer"`
 		Attributes interface{} `json:"Attributes"`

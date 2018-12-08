@@ -24,6 +24,8 @@ func main() {
 	nodesFile := flag.String("nodes-file", "", "nodes file")
 	groundLayerFile := flag.String("ground-layer-file", "", "ground layer file")
 	layerFile := flag.String("layer-file", "", "layer file")
+	starMode := flag.String("mode", "new", "start mode")
+
 	flag.Parse()
 
 	if *layerId < 1 {
@@ -62,7 +64,18 @@ func main() {
 		os.Exit(1)
 	}
 	cfg.Layer.Id = int32(*layerId)
-	cfg.Layer.Recover = false
+
+	switch *starMode {
+	case "new":
+		cfg.Layer.StartMode = config.LAYER_START_MODE_NEW
+	case "recover":
+		cfg.Layer.StartMode = config.LAYER_START_MODE_RECOVER
+	case "reboot":
+		cfg.Layer.StartMode = config.LAYER_START_MODE_REBOOT
+	default:
+		fmt.Printf("unknow start mode: %d\n", *starMode)
+		os.Exit(1)
+	}
 
 	file, e = ioutil.ReadFile(*nodesFile)
 	if e != nil {

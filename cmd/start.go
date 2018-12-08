@@ -13,7 +13,7 @@ import (
 func main() {
 	//TODO: init log module
 
-	recover := flag.Bool("recover", false, "recover")
+	starMode := flag.String("mode", "new", "start mode")
 	flag.Parse()
 
 	file, e := ioutil.ReadFile("./start.json")
@@ -26,7 +26,18 @@ func main() {
 	cfg := config.Config{}
 	json.Unmarshal(file, &cfg)
 	cfg.Layer.Id = 0
-	cfg.Layer.Recover = *recover
+
+	switch *starMode {
+	case "new":
+		cfg.Layer.StartMode = config.LAYER_START_MODE_NEW
+	case "recover":
+		cfg.Layer.StartMode = config.LAYER_START_MODE_RECOVER
+	case "reboot":
+		cfg.Layer.StartMode = config.LAYER_START_MODE_REBOOT
+	default:
+		fmt.Printf("unknow start mode: %d\n", *starMode)
+		os.Exit(1)
+	}
 
 	cfg.Process().Test()
 	layer.GetLayer(cfg.Layer.Id).Right().Start()

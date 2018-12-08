@@ -41,12 +41,18 @@ func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 
 	l := layer.GetLayer(int32(this.GetLayer())).Right()
 
-	if this.Cfg.Layer.Recover == true {
+	switch this.Cfg.Layer.StartMode {
+	case config.LAYER_START_MODE_RECOVER:
 		if l.GetVersion() != this.Version {
 			err.Error(
-				fmt.Errorf("layer version unmatch: origin=%d, expect=%d", l.GetVersion(), this.Version))
+				fmt.Errorf("layer version unmatch: origin=%d, expect=%d, ignored", l.GetVersion(), this.Version))
 			return
 		}
+	case config.LAYER_START_MODE_REBOOT:
+	case config.LAYER_START_MODE_NEW:
+	default:
+		err.Error(fmt.Errorf("unknown layer start mode: %d", this.Cfg.Layer.StartMode))
+		return
 	}
 
 	rMsg := &NodeResultMessage{}

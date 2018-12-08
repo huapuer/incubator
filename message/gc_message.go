@@ -42,7 +42,7 @@ func (this *GCMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 	runner.SetState(runner, "gc_started", true, this.interval,
 		func(runner actor.Actor) {
 			runner.Receive(this)
-		})
+		}).Test()
 
 	//ms := runtime.MemStats{}
 	//runtime.ReadMemStats(&ms)
