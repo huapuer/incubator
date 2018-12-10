@@ -60,8 +60,8 @@ func (this *variantBytesProtocal) Pack(msg message.RemoteMessage) (ret []byte) {
 }
 
 func (this *variantBytesProtocal) Parse(data []byte) (int, int) {
-	for i, b := range data {
-		if b&0x80 == 0 {
+	for i := len(data) - 1; i >= 0; i-- {
+		if data[i]&0x80 == 0 {
 			return i + 1, 0
 		}
 	}
