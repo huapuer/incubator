@@ -8,22 +8,23 @@ import (
 )
 
 const (
-	fixHeaderProtocalClassName = "protocal.fixHeaderProtocal"
+	fixedHeaderProtocalClassName = "protocal.fixedHeaderProtocal"
 )
 
 func init() {
-	RegisterProtocalPrototype(fixHeaderProtocalClassName, &fixHeaderProtocal{}).Test()
+	RegisterProtocalPrototype(fixedHeaderProtocalClassName, &fixedHeaderProtocal{}).Test()
 }
 
-type fixHeaderProtocal struct{}
+type fixedHeaderProtocal struct{}
 
-func (this fixHeaderProtocal) New(attrs interface{}, cfg config.Config) config.IOC {
+func (this fixedHeaderProtocal) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeProtocal{}
-	ret.Value(&fixHeaderProtocal{})
+	ret.Value(&fixedHeaderProtocal{})
 	return ret
 }
 
-func (this *fixHeaderProtocal) Pack(msg message.RemoteMessage) (ret []byte) {
+//go:noescape
+func (this *fixedHeaderProtocal) Pack(msg message.RemoteMessage) (ret []byte) {
 	bytes := serialization.Marshal(msg)
 	lth := len(bytes) + 1 + int(unsafe.Sizeof(int32(0)))
 
@@ -33,7 +34,7 @@ func (this *fixHeaderProtocal) Pack(msg message.RemoteMessage) (ret []byte) {
 	return
 }
 
-func (this *fixHeaderProtocal) Parse(data []byte) (int, int) {
+func (this *fixedHeaderProtocal) Parse(data []byte) (int, int) {
 	l := len(data)
 	if l < 4 {
 		return PROTOCAL_PARSE_STATE_SHORT, 0
@@ -47,4 +48,9 @@ func (this *fixHeaderProtocal) Parse(data []byte) (int, int) {
 	}
 
 	return lth, int(unsafe.Sizeof(int32(0)))
+}
+
+func (this *fixedHeaderProtocal) Decode(data []byte) (ret []byte) {
+	ret = data
+	return
 }

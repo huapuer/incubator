@@ -39,6 +39,7 @@ type Protocal interface {
 
 	Pack(message.RemoteMessage) []byte
 	Parse([]byte) (int, int)
+	Decode([]byte) []byte
 }
 
 type MaybeProtocal struct {

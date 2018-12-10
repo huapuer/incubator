@@ -168,7 +168,7 @@ func (this commonServer) handleData(data []byte, l int, c net.Conn) (err maybe.M
 		if this.readBufferSize >= this.packageSize {
 			pkg := this.packageBuffer[this.headerSize:this.packageSize]
 			this.packageBuffer = this.packageBuffer[this.packageSize:]
-			this.derived.handlePackage(pkg, c).Test()
+			this.derived.handlePackage(this.p.Decode(pkg), c).Test()
 			this.packageSize = protocal.PROTOCAL_PARSE_STATE_SHORT
 		}
 	} else if this.packageSize == protocal.PROTOCAL_PARSE_STATE_ERROR {
