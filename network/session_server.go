@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	sessionServerClassName = "server.sessionServer"
+	sessionServerClassName = "network.sessionServer"
 )
 
 func init() {
@@ -26,11 +26,14 @@ type sessionServer struct {
 
 func (this sessionServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeServer{}
+
+	network := config.GetAttrString(attrs, "Network", config.CheckStringNotEmpty).Right()
+	protocalClass := config.GetAttrString(attrs, "Protocal", config.CheckStringNotEmpty).Right()
+
 	s := &sessionServer{
 		commonServer{
-			network: cfg.Server.Network,
-			port:    cfg.Server.Port,
-			p:       protocal.GetProtocalPrototype(cfg.Server.Protocal).Right(),
+			network: network,
+			p:       protocal.GetProtocalPrototype(protocalClass).Right(),
 		},
 	}
 	s.Inherit(s)

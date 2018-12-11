@@ -1,12 +1,12 @@
 package io
 
 import (
+	"../common/maybe"
+	"../config"
+	"../layer"
+	"../message"
+	"../network"
 	"fmt"
-	"github.com/incubator/common/maybe"
-	"github.com/incubator/config"
-	"github.com/incubator/layer"
-	"github.com/incubator/message"
-	"github.com/incubator/network"
 )
 
 const (
@@ -28,7 +28,7 @@ func (this defaultIO) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeIO{}
 
 	inputJointsCfg := config.GetAttrMapEfaceArray(attrs, "InputJoints").Right().([]map[string]interface{})
-	outputJointsCfg := config.GetAttrMapEfaceArray(attrs, "InputJoints").Right().([]map[string]interface{})
+	outputJointsCfg := config.GetAttrMapEfaceArray(attrs, "OutputJoints").Right().([]map[string]interface{})
 
 	topoSchema := config.GetAttrInt32(cfg.Layer.Attributes, "TopoSchema", config.CheckInt32GT0).Right()
 	topoCfg, ok := cfg.Topos[topoSchema]
@@ -56,17 +56,9 @@ func (this defaultIO) New(attrs interface{}, cfg config.Config) config.IOC {
 			return ret
 		}
 
-		clientSchema := config.GetAttrInt32(jointCfg, "ClientSchema", nil).Right()
-		clientCfg, ok := cfg.Clients[clientSchema]
-		if !ok {
-			ret.Error(fmt.Errorf("client cfg not found: %d", clientSchema))
-			return ret
-		}
-
 		j := joint{
-			begin:  begin,
-			end:    end,
-			client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),
+			begin: begin,
+			end:   end,
 		}
 		value.inputJoints = append(value.inputJoints, j)
 	}
@@ -84,9 +76,24 @@ func (this defaultIO) New(attrs interface{}, cfg config.Config) config.IOC {
 			return ret
 		}
 
+		ip := config.GetAttrString(jointCfg, "IP", config.CheckStringNotEmpty).Right()
+		port := config.GetAttrInt(jointCfg, "Port", config.CheckIntGT0).Right()
+
+		clientSchema := config.GetAttrInt32(jointCfg, "ClientSchema", nil).Right()
+		clientCfg, ok := cfg.Clients[clientSchema]
+		if !ok {
+			ret.Error(fmt.Errorf("client cfg not found: %d", clientSchema))
+			return ret
+		}
+
+		c := network.GetClientPrototype(clientCfg.Class).
+			Right().New(clientCfg.Attributes, cfg).(network.MaybeClient).Right()
+		c.Connect(fmt.Sprintf("%s:%d", ip, port))
+
 		j := joint{
-			begin: begin,
-			end:   end,
+			begin:  begin,
+			end:    end,
+			client: c,
 		}
 		value.outputJoints = append(value.outputJoints, j)
 	}

@@ -3,11 +3,11 @@ package message
 import (
 	"../actor"
 	"../common/maybe"
+	"../config"
 	"../host"
 	"../layer"
+	"../serialization"
 	"errors"
-	"github.com/incubator/config"
-	"github.com/incubator/serialization"
 	"net"
 	"unsafe"
 )

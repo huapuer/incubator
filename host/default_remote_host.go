@@ -5,13 +5,14 @@ import (
 	"../config"
 	"../message"
 	"../network"
+	"errors"
 	"fmt"
 	"time"
 	"unsafe"
 )
 
 const (
-	defaultRemoteHostClassName = "actor.defaultRemoteHost"
+	defaultRemoteHostClassName = "host.defaultRemoteHost"
 )
 
 func init() {
@@ -22,6 +23,8 @@ type defaultRemoteHost struct {
 	commonHost
 	defaultHealthManager
 
+	ip     string
+	port   int
 	client network.Client
 }
 
@@ -34,8 +37,6 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 	ret := MaybeHost{}
 
 	clientSchema := config.GetAttrInt32(attrs, "ClientSchema", nil).Right()
-	ip := config.GetAttrString(attrs, "IP", config.CheckStringNotEmpty).Right()
-	port := config.GetAttrInt(attrs, "Port", config.CheckIntGT0).Right()
 	checkIntvl := config.GetAttrInt64(attrs, "CheckIntvl", config.CheckInt64GT0).Right()
 	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
 
@@ -46,14 +47,14 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 	}
 
 	host := &defaultRemoteHost{
-		client: network.DefaultClient.New(clientCfg.Attributes, cfg).(network.MaybeDefualtClient).Right(),
+		client: network.GetClientPrototype(clientCfg.Class).
+			Right().New(clientCfg.Attributes, cfg).(network.MaybeClient).Right(),
 		defaultHealthManager: defaultHealthManager{
 			health:         true,
 			checkIntvl:     time.Duration(checkIntvl),
 			heartbeatIntvl: time.Duration(heartbeatIntvl),
 		},
 	}
-	host.client.Connect(fmt.Sprint("%s:%d", ip, port))
 
 	ret.Value(host)
 	return ret
@@ -61,6 +62,34 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 
 func (this defaultRemoteHost) IsHealth() bool {
 	return this.health
+}
+
+func (this defaultRemoteHost) SetIP(ip string) {
+	this.ip = ip
+}
+
+func (this defaultRemoteHost) SetPort(port int) {
+	this.port = port
+}
+
+func (this defaultRemoteHost) Start() (err maybe.MaybeError) {
+	if this.ip == "" {
+		err.Error(errors.New("remote host ip not set"))
+		return
+	}
+	if this.port <= 0 {
+		err.Error(fmt.Errorf("illegal remote host port: %d", this.port))
+		return
+	}
+	if this.client == nil {
+		err.Error(errors.New("remote host client not inited"))
+		return
+	}
+
+	this.client.Connect(fmt.Sprint("%s:%d", this.ip, this.port))
+
+	err.Error(nil)
+	return
 }
 
 func (this defaultRemoteHost) GetSize() int32 {

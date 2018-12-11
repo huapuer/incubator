@@ -4,12 +4,12 @@ import (
 	"../common/class"
 	"../common/maybe"
 	"../config"
+	"../global"
 	"../protocal"
 	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/incubator/global"
 	"math/rand"
 	"net"
 	"time"
@@ -44,6 +44,7 @@ type Server interface {
 	HandleConnection(context.Context, net.Conn)
 	handleData([]byte, int, net.Conn) maybe.MaybeError
 	handlePackage([]byte, net.Conn) maybe.MaybeError
+	SetPort(int)
 }
 
 type MaybeServer struct {
@@ -82,10 +83,7 @@ type commonServer struct {
 }
 
 func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
-	if global.NodePort != 0 {
-		err.Error(fmt.Errorf("server already start at %d", global.NodePort))
-		return
-	}
+	global.AddListenedPort(this.port).Test()
 
 	if this.network == "" {
 		err.Error(errors.New("not network provided"))
@@ -99,8 +97,6 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 		err.Error(fmt.Errorf("illegal handler num: %d", this.handlerNum))
 		return
 	}
-
-	global.NodePort = this.port
 
 	this.packageBuffer = make([]byte, this.readBufferSize, 0)
 
@@ -181,4 +177,8 @@ func (this commonServer) handleData(data []byte, l int, c net.Conn) (err maybe.M
 
 func (this *commonServer) Inherit(cobj class.Class) {
 	this.derived = cobj.(Server)
+}
+
+func (this *commonServer) SetPort(port int) {
+	this.port = port
 }

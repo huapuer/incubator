@@ -3,9 +3,9 @@ package message
 import (
 	"../actor"
 	"../common/maybe"
+	"../layer"
+	"../persistence"
 	"fmt"
-	"github.com/incubator/layer"
-	"github.com/incubator/persistence"
 	"time"
 	"unsafe"
 )

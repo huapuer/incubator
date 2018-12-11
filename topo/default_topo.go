@@ -3,15 +3,15 @@ package topo
 import (
 	"../common/maybe"
 	"../config"
+	"../global"
 	"../host"
+	"../layer"
 	"../message"
 	"../persistence"
 	"../serialization"
 	"../storage"
 	"errors"
 	"fmt"
-	"github.com/incubator/global"
-	"github.com/incubator/layer"
 	"math/rand"
 	"net"
 	"unsafe"
@@ -82,6 +82,7 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	topo.linkRadius = config.GetAttrInt64(attrs, "LinkRadius", config.CheckInt64GT0).Right()
 	topo.backupFactor = config.GetAttrInt32(attrs, "BackupFactor", config.CheckInt32GT0).Right()
 	topo.localHostSchema = config.GetAttrInt32(attrs, "LocalHostSchema", config.CheckInt32GT0).Right()
+	topo.linkSchema = config.GetAttrInt32(attrs, "LinkSchema", config.CheckInt32GT0).Right()
 
 	remoteEntries := config.GetAttrMapEfaceArray(attrs, "RemoteEntries").Right().([]map[string]interface{})
 	topo.remoteNum = int32(len(remoteEntries))
@@ -93,18 +94,27 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 
 	topo.localHostMod = -1
 	for i, entry := range remoteEntries {
-		remoteHostClass := config.GetAttrString(entry, "RemoteHostClass", config.CheckStringNotEmpty).Right()
+		remoteHostSchema := config.GetAttrInt32(entry, "RemoteHostSchema", config.CheckInt32GT0).Right()
 		remoteHostAttr := config.GetAttrMapEface(entry, "Attributes").Right()
 
 		ip := config.GetAttrString(remoteHostAttr, "IP", config.CheckStringNotEmpty).Right()
-		port := config.GetAttrInt(attrs, "Port", config.CheckIntGT0).Right()
-		if ip == interalIP && port == global.NodePort {
+		port := config.GetAttrInt(remoteHostAttr, "Port", config.CheckIntGT0).Right()
+		if ip == interalIP && global.IsInListenedPorts(port) {
 			topo.localHostMod = int32(i)
 			topo.addr = fmt.Sprint("%s:%d", ip, port)
 		}
 
-		h := host.GetHostPrototype(remoteHostClass).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right()
+		remoteHostCfg, ok := cfg.Hosts[remoteHostSchema]
+		if !ok {
+			ret.Error(fmt.Errorf("no remote host cfg found: %d", remoteHostSchema))
+			return ret
+		}
+
+		h := host.GetHostPrototype(remoteHostCfg.Class).Right().New(remoteHostAttr, cfg).(host.MaybeHost).Right()
 		h.SetId(int64(i))
+		h.SetIP(ip)
+		h.SetPort(port)
+		h.Start().Test()
 
 		topo.remoteHosts = append(topo.remoteHosts, h)
 	}
@@ -187,35 +197,33 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	topo.linkCanon = host.GetHostPrototype(linkCfg.Class).Right()
 
-	linkSparseEntries := config.GetAttrMapEfaceArray(linkCfg.Attributes, "SparseEnties").Right().([]map[string]interface{})
+	linkSparseEntries := config.GetAttrMapEfaceArray(attrs, "LinkSparseEntries").Right().([]map[string]interface{})
 
 	entries := make([]*storage.SparseEntry, 0, 0)
 	for _, entryCfg := range linkSparseEntries {
 		keyTo := config.GetAttrInt64(entryCfg, "KeyTo", config.CheckInt64GT0).Right()
-		offset := config.GetAttrInt64(entryCfg, "Offset", config.CheckInt64GT0).Right()
 		size := config.GetAttrInt64(entryCfg, "Size", config.CheckInt64GT0).Right()
-		hashDepth := config.GetAttrInt32(entryCfg, "Offset", config.CheckInt32GET0).Right()
+		hashStride := config.GetAttrInt32(entryCfg, "HashStride", config.CheckInt32GET0).Right()
 
 		entries = append(entries, &storage.SparseEntry{
 			KeyTo:      keyTo,
-			Offset:     offset,
 			Size:       size,
-			HashStride: hashDepth,
+			HashStride: hashStride,
 		})
 	}
 
-	linkDenseSize := config.GetAttrInt64(linkCfg.Attributes, "DenseSize", config.CheckInt64GT0).Right()
-	linkHashDepth := config.GetAttrInt32(linkCfg.Attributes, "HashDepth", config.CheckInt32GET0).Right()
+	linkDenseSize := config.GetAttrInt64(attrs, "LinkDenseSize", config.CheckInt64GT0).Right()
+	linkHashDepth := config.GetAttrInt32(attrs, "LinkHashDepth", config.CheckInt32GET0).Right()
 
 	switch cfg.Layer.StartMode {
 	case config.LAYER_START_MODE_RECOVER:
 		l := layer.GetLayer(cfg.Layer.Id).Right()
 		topo.localHosts = storage.NewDenseTable(
-			topo.localHostCanon.(storage.DenseTableElement),
+			topo.linkCanon.(storage.DenseTableElement),
 			topo.totalHostNum*int64(topo.backupFactor),
 			topo.totalHostNum/int64(topo.remoteNum),
 			entries,
-			topo.localHostCanon.(host.Host).GetSize(),
+			topo.linkCanon.(host.Host).GetSize(),
 			linkHashDepth,
 			persistence.FromPersistence(
 				persistence.FROM_PERSISTENCE_MODE_RECOVER,
@@ -226,11 +234,11 @@ func (this defaultTopo) New(attrs interface{}, cfg config.Config) config.IOC {
 				LinkPersistentClass).Right()).Right()
 	case config.LAYER_START_MODE_REBOOT:
 		topo.localHosts = storage.NewDenseTable(
-			topo.localHostCanon.(storage.DenseTableElement),
+			topo.linkCanon.(storage.DenseTableElement),
 			topo.totalHostNum*int64(topo.backupFactor),
 			topo.totalHostNum/int64(topo.remoteNum),
 			entries,
-			topo.localHostCanon.(host.Host).GetSize(),
+			topo.linkCanon.(host.Host).GetSize(),
 			linkHashDepth,
 			persistence.FromPersistence(
 				persistence.FROM_PERSISTENCE_MODE_REBOOT,

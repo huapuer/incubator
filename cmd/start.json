@@ -1,0 +1,91 @@
+{
+  "Layer":{
+    "Space":"start",
+    "Id":0,
+    "StartMode":0,
+    "Class":"layer.defaultLayer",
+    "SuperLayer":-1,
+    "Attributes":{
+      "TopoSchema":1
+    }
+  },
+
+  "Services":[
+    {
+      "ServerSchema":1
+    }
+  ],
+
+  "Servers":[
+    {
+      "Schema":1,
+      "Class":"network.sessionServer",
+      "Attributes":{
+        "Network":"tcp",
+        "Port":8888,
+        "Protocal":"protocal.fixedHeaderProtocal"
+      }
+    }
+  ],
+
+  "Topos":[
+    {
+      "Schema": 1,
+      "Class": "topo.defaultSessionTopo",
+      "Attributes": {
+        "LocalHostSchema": 0
+      }
+    }
+  ],
+
+  "Hosts":[
+    {
+      "Schema": 1,
+      "Class":"host.defaultSessionHost",
+      "Attributes":{}
+    }
+  ],
+
+  "Routers":[
+    {
+      "Id":0,
+      "Class":"router.dummyRouter",
+      "Attributes":{
+        "ActorSchema":1
+      }
+    }
+  ],
+
+  "Actors":[
+    {
+      "Schema":1,
+      "Class":"actor.defaultActor",
+      "Attributes":{
+        "HeartbeatIntvl":100000
+      }
+    }
+  ],
+
+  "Messages:":[
+    {
+      "Type":1,
+      "Class":"message.PullUpMessage",
+      "RouterId":0
+    },
+    {
+      "Type":2,
+      "Class":"message.GCMessage",
+      "RouterId":0
+    },
+    {
+      "Type":3,
+      "Class":"message.TopoPersistentMessage",
+      "RouterId":0
+    },
+    {
+      "Type":4,
+      "Class":"message.nodeResultMessage",
+      "RouterId":0
+    }
+  ]
+}

@@ -1,11 +1,11 @@
 package io
 
 import (
+	"../common/maybe"
+	"../config"
+	"../message"
+	"../network"
 	"fmt"
-	"github.com/incubator/common/maybe"
-	"github.com/incubator/config"
-	"github.com/incubator/message"
-	"github.com/incubator/network"
 )
 
 var (

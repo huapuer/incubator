@@ -3,6 +3,7 @@ package layer
 import (
 	"../common/maybe"
 	"../config"
+	"../io"
 	"../message"
 	"../network"
 	"../router"
@@ -10,7 +11,6 @@ import (
 	"../topo"
 	"errors"
 	"fmt"
-	"github.com/incubator/io"
 	"math/rand"
 )
 

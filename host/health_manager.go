@@ -2,9 +2,9 @@ package host
 
 import (
 	"../common/maybe"
+	"../layer"
+	"../message"
 	"fmt"
-	"github.com/incubator/layer"
-	"github.com/incubator/message"
 	"time"
 )
 

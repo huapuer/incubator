@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultLinkHostClassName = "actor.defaultLinkHost"
+	defaultLinkHostClassName = "host.defaultLinkHost"
 )
 
 func init() {

@@ -1,9 +1,9 @@
 package actor
 
 import (
+	"../common/maybe"
+	"../message"
 	"fmt"
-	"github.com/incubator/common/maybe"
-	"github.com/incubator/message"
 	"time"
 )
 
@@ -28,7 +28,7 @@ func (this defaultHealthManager) Start(runner Actor) (err maybe.MaybeError) {
 	go func() {
 		for {
 			runner.Receive(msg)
-			time.Sleep(this.heartbeatIntvl)
+			time.Sleep(this.heartbeatIntvl * time.Millisecond)
 		}
 	}()
 

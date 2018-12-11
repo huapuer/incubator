@@ -39,6 +39,9 @@ type Host interface {
 	SetId(int64)
 	Receive(message.RemoteMessage) maybe.MaybeError
 	IsHealth() bool
+	SetIP(string)
+	SetPort(int)
+	Start() maybe.MaybeError
 }
 
 type MaybeHost struct {
@@ -73,6 +76,18 @@ func (this commonHost) GetId() int64 {
 func (this *commonHost) SetId(id int64) {
 	this.id = id
 	return
+}
+
+func (this commonHost) SetIP(string) {
+	panic("not implemented")
+}
+
+func (this commonHost) SetPort(int) {
+	panic("not implemented")
+}
+
+func (this commonHost) Start() maybe.MaybeError {
+	panic("not implemented")
 }
 
 type commonLinkHost struct {

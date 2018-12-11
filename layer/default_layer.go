@@ -48,7 +48,9 @@ func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
 			ret.Error(fmt.Errorf("server config not found for schema: %d", service.ServerSchema))
 			return ret
 		}
-		this.services = append(this.services, network.GetServerPrototype(serverCfg.Class).Right().New(serverCfg.Attributes, cfg).(network.Server))
+		server := network.GetServerPrototype(serverCfg.Class).Right().New(serverCfg.Attributes, cfg).(network.Server)
+		server.SetPort(service.Port)
+		this.services = append(this.services, server)
 	}
 
 	ret.Value(layer)

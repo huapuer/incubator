@@ -20,7 +20,7 @@ func init() {
 type defaultActor struct {
 	commonActor
 	mailBox
-	healthManager
+	defaultHealthManager
 }
 
 func (this defaultActor) New(attrs interface{}, cfg config.Config) config.IOC {
@@ -29,7 +29,7 @@ func (this defaultActor) New(attrs interface{}, cfg config.Config) config.IOC {
 	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
 
 	actor := &defaultActor{
-		healthManager: defaultHealthManager{
+		defaultHealthManager: defaultHealthManager{
 			heartbeatIntvl: time.Duration(heartbeatIntvl),
 		},
 	}
@@ -45,7 +45,7 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 		return
 	}
 
-	this.healthManager.Start(this).Test()
+	this.defaultHealthManager.Start(this).Test()
 
 	go func(ctx context.Context) {
 		for {

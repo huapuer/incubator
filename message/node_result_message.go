@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	NodeResultMessageClassName = "message.resultMessage"
+	NodeResultMessageClassName = "message.nodeResultMessage"
 )
 
 func init() {

@@ -1,0 +1,172 @@
+{
+  "Layer":{
+    "Space":"pullup",
+    "Id":1,
+    "StartMode":0,
+    "Class":"layer.defaultLayer",
+    "SuperLayer":0,
+    "Attributes":{
+      "TopoSchema":1
+    }
+  },
+
+  "Services":[
+    {
+      "ServerSchema":1,
+      "Port":8889
+    }
+  ],
+
+  "Servers":[
+    {
+      "Schema":1,
+      "Class":"network.defaultServer",
+      "Attributes":{
+        "Network":"tcp",
+        "HandlerNum":100,
+        "Protocal":"protocal.fixedHeaderProtocal"
+      }
+    }
+  ],
+
+  "Topos":[
+    {
+      "Schema": 1,
+      "Class": "topo.defaultTopo",
+      "Attributes": {
+        "BackupFactor":2,
+        "LocalHostSchema": 1,
+        "TotalHostNum":10000,
+        "RemoteEntries":[
+          {
+            "RemoteHostSchema":"2",
+            "Attributes":{
+              "IP":"0.0.0.0",
+              "Port":8889
+            }
+          },
+          {
+            "RemoteHostSchema":"2",
+            "Attributes":{
+              "IP":"0.0.0.0",
+              "Port":8890
+            }
+          }
+        ],
+        "LinkSchema":3,
+        "LinkRadius":100,
+        "LinkDenseSize":20,
+        "LinkHashDepth":3,
+        "LinkSparseEntries":[
+          {
+            "KeyTo":60,
+            "Size":30,
+            "HashStride":7
+          },
+          {
+            "KeyTo":120,
+            "Size":40,
+            "HashStride":11
+          },
+          {
+            "KeyTo":200,
+            "Size":50,
+            "HashStride":13
+          }
+        ]
+      }
+    }
+  ],
+
+  "IO":{
+    "Class":"io.defaultIO",
+    "Attributes":{
+      "InputJoints":[
+        {
+          "Begin":0,
+          "End":100
+        }
+      ],
+      "OutputJoints":[
+        {
+          "ClientSchema":1,
+          "Begin":100,
+          "End":200,
+          "IP":"0.0.0.0",
+          "Port":"9999"
+        }
+      ]
+    }
+  },
+
+  "Hosts":[
+    {
+      "Schema": 1,
+      "Class":"host.defaultLocalHost",
+      "Attributes":{}
+    },
+    {
+      "Schema": 2,
+      "Class":"host.defaultRemoteHost",
+      "Attributes":{
+        "ClientSchema":"1",
+        "CheckIntvl":10000,
+        "HeartbeatIntvl":20000
+      }
+    },
+    {
+      "Schema": 3,
+      "Class":"host.defaultLinkHost",
+      "Attributes":{}
+    }
+  ],
+
+  "Clients":[
+    {
+      "Schema": 1,
+      "Class":"network.defaultClient",
+      "Attributes":{
+        "MaxIdle":10,
+        "MaxBusy":100,
+        "Timeout": 10000,
+        "Protocal":"protocal.fixedHeaderProtocal"
+      }
+    }
+  ],
+
+  "Routers":[
+    {
+      "Id":1,
+      "Class":"router.spikeRouter",
+      "Attributes":{
+        "ActorSchema":1,
+        "ActorNum": 10,
+        "Shrink":2
+      }
+    }
+  ],
+
+  "Actors":[
+    {
+      "Schema":1,
+      "Class":"actor.spikeActor",
+      "Attributes":{
+        "HeartbeatIntvl":100000,
+        "MailBoxSize":100
+      }
+    }
+  ],
+
+  "Messages:":[
+    {
+      "Type":1,
+      "Class":"message.HealthCheckReqMessage",
+      "RouterId":1
+    },
+    {
+      "Type":2,
+      "Class":"message.HealthCheckRespMessage",
+      "RouterId":1
+    }
+  ]
+}

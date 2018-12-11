@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultServerClassName = "server.defaultServer"
+	defaultServerClassName = "network.defaultServer"
 )
 
 func init() {
@@ -26,14 +26,12 @@ func (this defaultServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeServer{}
 
 	network := config.GetAttrString(attrs, "Network", config.CheckStringNotEmpty).Right()
-	port := config.GetAttrInt(attrs, "Port", config.CheckIntGT0).Right()
 	handlerNum := config.GetAttrInt(attrs, "HandlerNum", config.CheckIntGT0).Right()
 	protocalClass := config.GetAttrString(attrs, "Protocal", config.CheckStringNotEmpty).Right()
 
 	s := &defaultServer{
 		commonServer{
 			network:    network,
-			port:       port,
 			handlerNum: handlerNum,
 			p:          protocal.GetProtocalPrototype(protocalClass).Right(),
 		},

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 )
 
 const (
@@ -20,6 +21,7 @@ func init() {
 type spikeActor struct {
 	commonActor
 	mailBox
+	defaultHealthManager
 
 	waked bool
 	ctx   context.Context
@@ -29,7 +31,13 @@ type spikeActor struct {
 func (this spikeActor) New(attrs interface{}, cfg config.Config) config.IOC {
 	ret := MaybeActor{}
 
-	actor := &defaultActor{}
+	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
+
+	actor := &spikeActor{
+		defaultHealthManager: defaultHealthManager{
+			heartbeatIntvl: time.Duration(heartbeatIntvl),
+		},
+	}
 	actor.mailBox.Init(attrs, cfg).Test()
 
 	ret.Value(actor)
@@ -41,6 +49,8 @@ func (this *spikeActor) Start(ctx context.Context) (err maybe.MaybeError) {
 		err.Error(errors.New("mailbox not inited."))
 		return
 	}
+
+	this.defaultHealthManager.Start(this).Test()
 
 	this.ctx = ctx
 

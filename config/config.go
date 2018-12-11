@@ -78,6 +78,7 @@ type Config struct {
 	} `json:"Layer"`
 	Services []struct {
 		ServerSchema int32 `json:"Server"`
+		Port         int   `json:"Port"`
 	} `json:"Services"`
 	IO struct {
 		Class      string `json:"Class"`

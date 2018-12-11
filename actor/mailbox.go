@@ -11,7 +11,7 @@ type mailBox struct {
 }
 
 func (this *mailBox) Init(attrs interface{}, cfg config.Config) (err maybe.MaybeError) {
-	size := config.GetAttrInt(attrs, " MailBoxSize", config.CheckIntGT0).Right()
+	size := config.GetAttrInt(attrs, "MailBoxSize", config.CheckIntGT0).Right()
 	this.mailbox = make(chan message.Message, size)
 
 	return
