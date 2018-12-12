@@ -1,12 +1,12 @@
 package host
 
 import (
-	"../common/maybe"
-	"../config"
-	"../message"
-	"../network"
 	"errors"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/network"
 	"time"
 	"unsafe"
 )
@@ -25,22 +25,22 @@ type defaultRemoteHost struct {
 
 	ip     string
 	port   int
-	client network.Client
+	client interfaces.Client
 }
 
-func (this *defaultRemoteHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this *defaultRemoteHost) Receive(msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	this.client.Send(msg).Test()
 	return
 }
 
-func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeHost{}
+func (this defaultRemoteHost) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeHost{}
 
 	clientSchema := config.GetAttrInt32(attrs, "ClientSchema", nil).Right()
 	checkIntvl := config.GetAttrInt64(attrs, "CheckIntvl", config.CheckInt64GT0).Right()
 	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
 
-	clientCfg, ok := cfg.Clients[clientSchema]
+	clientCfg, ok := cfg.(*config.Config).ClientMap[clientSchema]
 	if !ok {
 		ret.Error(fmt.Errorf("client cfg not found: %d", clientSchema))
 		return ret
@@ -48,7 +48,7 @@ func (this defaultRemoteHost) New(attrs interface{}, cfg config.Config) config.I
 
 	host := &defaultRemoteHost{
 		client: network.GetClientPrototype(clientCfg.Class).
-			Right().New(clientCfg.Attributes, cfg).(network.MaybeClient).Right(),
+			Right().New(clientCfg.Attributes, cfg).(interfaces.MaybeClient).Right(),
 		defaultHealthManager: defaultHealthManager{
 			health:         true,
 			checkIntvl:     time.Duration(checkIntvl),

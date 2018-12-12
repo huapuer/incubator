@@ -1,19 +1,17 @@
 package host
 
 import (
-	"../common/maybe"
-	"../config"
-	"../message"
-	"../storage"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 	"net"
 )
 
 var (
-	hostPrototypes = make(map[string]Host)
+	hostPrototypes = make(map[string]interfaces.Host)
 )
 
-func RegisterHostPrototype(name string, val Host) (err maybe.MaybeError) {
+func RegisterHostPrototype(name string, val interfaces.Host) (err maybe.MaybeError) {
 	if _, ok := hostPrototypes[name]; ok {
 		err.Error(fmt.Errorf("host prototype redefined: %s", name))
 		return
@@ -22,47 +20,13 @@ func RegisterHostPrototype(name string, val Host) (err maybe.MaybeError) {
 	return
 }
 
-func GetHostPrototype(name string) (ret MaybeHost) {
+func GetHostPrototype(name string) (ret interfaces.MaybeHost) {
 	if prototype, ok := hostPrototypes[name]; ok {
 		ret.Value(prototype)
 		return
 	}
 	ret.Error(fmt.Errorf("host prototype for class not found: %s", name))
 	return
-}
-
-type Host interface {
-	config.IOC
-	storage.DenseTableElement
-
-	GetId() int64
-	SetId(int64)
-	Receive(message.RemoteMessage) maybe.MaybeError
-	IsHealth() bool
-	SetIP(string)
-	SetPort(int)
-	Start() maybe.MaybeError
-}
-
-type MaybeHost struct {
-	config.IOC
-
-	maybe.MaybeError
-	value Host
-}
-
-func (this MaybeHost) Value(value Host) {
-	this.Error(nil)
-	this.value = value
-}
-
-func (this MaybeHost) Right() Host {
-	this.Test()
-	return this.value
-}
-
-func (this MaybeHost) New(cfg config.Config, args ...int32) config.IOC {
-	panic("not implemented.")
 }
 
 type commonHost struct {
@@ -104,8 +68,8 @@ func (this *commonLinkHost) SetGuestId(id int64) {
 }
 
 type SessionHost interface {
-	Host
+	interfaces.Host
 
 	SetPeer(net.Conn)
-	Replicate() MaybeHost
+	Replicate() interfaces.MaybeHost
 }

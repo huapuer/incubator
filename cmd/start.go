@@ -1,11 +1,12 @@
 package main
 
 import (
-	"../config"
-	"../layer"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	_ "github.com/incubator/layer"
 	"io/ioutil"
 	"os"
 )
@@ -24,8 +25,15 @@ func main() {
 	fmt.Printf("%s\n", string(file))
 
 	cfg := config.Config{}
-	json.Unmarshal(file, &cfg)
+	err := json.Unmarshal(file, &cfg)
+	if err != nil {
+		fmt.Printf("unmarshal cfg failed: %v\n", err)
+		os.Exit(1)
+	}
+
 	cfg.Layer.Id = 0
+
+	fmt.Printf("%+v", cfg)
 
 	switch *starMode {
 	case "new":
@@ -40,5 +48,5 @@ func main() {
 	}
 
 	cfg.Process().Test()
-	layer.GetLayer(cfg.Layer.Id).Right().Start()
+	interfaces.GetLayer(cfg.Layer.Id).Right().Start()
 }

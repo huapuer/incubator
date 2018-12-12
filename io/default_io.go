@@ -1,12 +1,11 @@
 package io
 
 import (
-	"../common/maybe"
-	"../config"
-	"../layer"
-	"../message"
-	"../network"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/network"
 )
 
 const (
@@ -14,7 +13,7 @@ const (
 )
 
 func init() {
-	RegisterIOPrototype(defaultIOClassName, &defaultIO{}).Test()
+	interfaces.RegisterIOPrototype(defaultIOClassName, &defaultIO{}).Test()
 }
 
 type defaultIO struct {
@@ -24,14 +23,14 @@ type defaultIO struct {
 	outputJoints []joint
 }
 
-func (this defaultIO) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeIO{}
+func (this defaultIO) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeIO{}
 
 	inputJointsCfg := config.GetAttrMapEfaceArray(attrs, "InputJoints").Right().([]map[string]interface{})
 	outputJointsCfg := config.GetAttrMapEfaceArray(attrs, "OutputJoints").Right().([]map[string]interface{})
 
-	topoSchema := config.GetAttrInt32(cfg.Layer.Attributes, "TopoSchema", config.CheckInt32GT0).Right()
-	topoCfg, ok := cfg.Topos[topoSchema]
+	topoSchema := config.GetAttrInt32(cfg.(*config.Config).Layer.Attributes, "TopoSchema", config.CheckInt32GT0).Right()
+	topoCfg, ok := cfg.(*config.Config).TopoMap[topoSchema]
 	if !ok {
 		ret.Error(fmt.Errorf("topo cfg not found: %d", topoSchema))
 		return ret
@@ -80,14 +79,14 @@ func (this defaultIO) New(attrs interface{}, cfg config.Config) config.IOC {
 		port := config.GetAttrInt(jointCfg, "Port", config.CheckIntGT0).Right()
 
 		clientSchema := config.GetAttrInt32(jointCfg, "ClientSchema", nil).Right()
-		clientCfg, ok := cfg.Clients[clientSchema]
+		clientCfg, ok := cfg.(*config.Config).ClientMap[clientSchema]
 		if !ok {
 			ret.Error(fmt.Errorf("client cfg not found: %d", clientSchema))
 			return ret
 		}
 
 		c := network.GetClientPrototype(clientCfg.Class).
-			Right().New(clientCfg.Attributes, cfg).(network.MaybeClient).Right()
+			Right().New(clientCfg.Attributes, cfg).(interfaces.MaybeClient).Right()
 		c.Connect(fmt.Sprintf("%s:%d", ip, port))
 
 		j := joint{
@@ -102,10 +101,10 @@ func (this defaultIO) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
-func (this defaultIO) Input(host int64, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this defaultIO) Input(host int64, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	for _, joint := range this.inputJoints {
 		if host >= joint.begin && host <= joint.end {
-			topo := layer.GetLayer(this.layerId).Right().GetTopo()
+			topo := interfaces.GetLayer(this.layerId).Right().GetTopo()
 			topo.SendToHost(host, msg).Test()
 
 			err.Error(nil)
@@ -116,7 +115,7 @@ func (this defaultIO) Input(host int64, msg message.RemoteMessage) (err maybe.Ma
 	return
 }
 
-func (this defaultIO) Output(host int64, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this defaultIO) Output(host int64, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	for _, joint := range this.outputJoints {
 		if host >= joint.begin && host <= joint.end {
 			joint.client.Send(msg).Test()

@@ -1,10 +1,10 @@
 package network
 
 import (
-	"../common/maybe"
-	"../config"
-	"../message"
-	"../protocal"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/protocal"
 	"time"
 )
 
@@ -21,17 +21,17 @@ var (
 )
 
 type defaultClient struct {
-	config.IOC
+	interfaces.IOC
 
 	maxIdle int32
 	maxBusy int32
 	timeout int64
 	pool    connectionPool
-	p       protocal.Protocal
+	p       interfaces.Protocal
 }
 
-func (this *defaultClient) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeClient{}
+func (this *defaultClient) New(attrs interface{}, cfg config.Config) interfaces.IOC {
+	ret := interfaces.MaybeClient{}
 
 	maxIdle := config.GetAttrInt32(attrs, "MaxIdle", config.CheckInt32GT0).Right()
 	maxBusy := config.GetAttrInt32(attrs, "MaxBusy", config.CheckInt32GT0).Right()
@@ -53,8 +53,8 @@ func (this *defaultClient) Connect(addr string) {
 	this.pool = NewConnectionPool(addr, this.maxIdle, this.maxBusy, time.Duration(this.timeout)).Right()
 }
 
-//go:noescape
-func (this *defaultClient) Send(msg message.RemoteMessage) (err maybe.MaybeError) {
+////go:noescape
+func (this *defaultClient) Send(msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	_, e := this.pool.GetConnection().Right().Write(this.p.Pack(msg))
 	if e != nil {
 		err.Error(e)

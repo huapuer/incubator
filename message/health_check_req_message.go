@@ -1,9 +1,8 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../layer"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 	"time"
 	"unsafe"
 )
@@ -13,7 +12,7 @@ const (
 )
 
 func init() {
-	RegisterMessagePrototype(HealthCheckReqMessageClassName, &HealthCheckReqMessage{
+	interfaces.RegisterMessagePrototype(HealthCheckReqMessageClassName, &HealthCheckReqMessage{
 		commonEchoMessage: commonEchoMessage{
 			commonMessage: commonMessage{
 				layerId: -1,
@@ -29,7 +28,7 @@ type HealthCheckReqMessage struct {
 	commonEchoMessage
 }
 
-func (this *HealthCheckReqMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+func (this *HealthCheckReqMessage) Process(runner interfaces.Actor) (err maybe.MaybeError) {
 	router := runner.GetRouter().Right()
 
 	health := true
@@ -40,7 +39,7 @@ func (this *HealthCheckReqMessage) Process(runner actor.Actor) (err maybe.MaybeE
 		health = time.Now().Unix()-healthTil <= healthIntvl
 	}
 
-	l := layer.GetLayer(int32(this.GetLayer())).Right()
+	l := interfaces.GetLayer(int32(this.GetLayer())).Right()
 
 	rMsg := &HealthCheckRespMessage{
 		addr:    l.GetTopo().GetAddr(),

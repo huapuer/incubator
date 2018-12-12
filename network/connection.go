@@ -1,9 +1,9 @@
 package network
 
 import (
-	"../common/maybe"
 	"errors"
 	"fmt"
+	"github.com/incubator/common/maybe"
 	"net"
 	"time"
 )

@@ -1,13 +1,12 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../config"
-	"../layer"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
 	"unsafe"
 )
 
@@ -16,7 +15,7 @@ const (
 )
 
 func init() {
-	RegisterMessagePrototype(PullUpMessageClassName, &PullUpMessage{
+	interfaces.RegisterMessagePrototype(PullUpMessageClassName, &PullUpMessage{
 		commonMessage: commonMessage{
 			layerId: -1,
 			typ:     -1,
@@ -33,13 +32,13 @@ type PullUpMessage struct {
 	Cfg     *config.Config
 }
 
-func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+func (this *PullUpMessage) Process(runner interfaces.Actor) (err maybe.MaybeError) {
 	if this.Cfg == nil {
 		err.Error(errors.New("cfg is nil"))
 		return
 	}
 
-	l := layer.GetLayer(int32(this.GetLayer())).Right()
+	l := interfaces.GetLayer(int32(this.GetLayer())).Right()
 
 	switch this.Cfg.Layer.StartMode {
 	case config.LAYER_START_MODE_RECOVER:
@@ -65,7 +64,7 @@ func (this *PullUpMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 	maybe.TryCatch(
 		func() {
 			this.Cfg.Process().Test()
-			layer.GetLayer(this.Cfg.Layer.Id).Right().Start()
+			interfaces.GetLayer(this.Cfg.Layer.Id).Right().Start()
 
 			rMsg.info.msg = "ok"
 		},

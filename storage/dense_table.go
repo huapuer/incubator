@@ -1,10 +1,11 @@
 package storage
 
 import (
-	"../common/maybe"
-	"../serialization"
 	"errors"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/serialization"
 	"sync/atomic"
 	"unsafe"
 )
@@ -30,7 +31,7 @@ type DenseTable struct {
 	size          int64
 	elementSize   int32
 	hashDepth     int32
-	elementCanon  DenseTableElement
+	elementCanon  interfaces.DenseTableElement
 }
 
 type MaybeDenseTable struct {
@@ -48,13 +49,6 @@ func (this MaybeDenseTable) Right() DenseTable {
 	return this.value
 }
 
-type DenseTableElement interface {
-	GetSize() int32
-	Get(int64, unsafe.Pointer) bool
-	Put(unsafe.Pointer, unsafe.Pointer) bool
-	Erase(int64, unsafe.Pointer) bool
-}
-
 type MaybePointer struct {
 	maybe.MaybeError
 	value unsafe.Pointer
@@ -70,7 +64,7 @@ func (this MaybePointer) Right() unsafe.Pointer {
 	return this.value
 }
 
-func NewDenseTable(elementCanon DenseTableElement,
+func NewDenseTable(elementCanon interfaces.DenseTableElement,
 	blocksNum int64,
 	denseSize int64,
 	sparseEntries []*SparseEntry,
@@ -167,7 +161,7 @@ func (this *DenseTable) Get(block int64, key int64) (ret MaybePointer) {
 	return
 }
 
-//go:noescape
+////go:noescape
 func (this *DenseTable) Put(block int64, key int64, val unsafe.Pointer) bool {
 	if key < this.denseSize {
 		ptr := unsafe.Pointer(uintptr(block*this.blockSize + int64(this.data) + key*int64(this.elementSize)))

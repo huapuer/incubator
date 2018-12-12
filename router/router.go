@@ -1,60 +1,31 @@
 package router
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../config"
-	"../message"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 )
 
 var (
-	routerPrototype = make(map[string]Router)
+	routerPrototype = make(map[string]interfaces.Router)
 )
 
-func RegisterRouterPrototype(name string, val Router) (err maybe.MaybeError) {
+func RegisterRouterPrototype(name string, val interfaces.Router) (err maybe.MaybeError) {
 	if _, ok := routerPrototype[name]; ok {
 		err.Error(fmt.Errorf("router redefined: %s", name))
 		return
 	}
 	routerPrototype[name] = val
+
+	err.Error(nil)
 	return
 }
 
-func GetRouterPrototype(name string) (ret MaybeRouter) {
+func GetRouterPrototype(name string) (ret interfaces.MaybeRouter) {
 	if routerPrototype, ok := routerPrototype[name]; ok {
 		ret.Value(routerPrototype)
 		return
 	}
 	ret.Error(fmt.Errorf("router prototype not found: %s", name))
 	return
-}
-
-type Router interface {
-	config.IOC
-
-	Start()
-	Route(message.RemoteMessage) maybe.MaybeError
-	SimRoute(int64, int) int64
-	GetActors() []actor.Actor
-	Stop()
-}
-
-type MaybeRouter struct {
-	maybe.MaybeError
-	value Router
-}
-
-func (this MaybeRouter) New(attrs interface{}, cfg config.Config) config.IOC {
-	panic("not implemented.")
-}
-
-func (this MaybeRouter) Value(value Router) {
-	this.Error(nil)
-	this.value = value
-}
-
-func (this MaybeRouter) Right() Router {
-	this.Test()
-	return this.value
 }

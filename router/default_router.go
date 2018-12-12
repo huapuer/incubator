@@ -1,12 +1,12 @@
 package router
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../config"
-	"../message"
 	"context"
 	"fmt"
+	"github.com/incubator/actor"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
 )
 
 const (
@@ -18,19 +18,19 @@ func init() {
 }
 
 type defaultRouter struct {
-	actors    []actor.Actor
+	actors    []interfaces.Actor
 	actorsNum int
 	shrink    int
 }
 
-func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeRouter{}
+func (this defaultRouter) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeRouter{}
 
 	actorSchema := config.GetAttrInt32(attrs, "ActorSchema", config.CheckInt32GT0).Right()
 	actorNum := config.GetAttrInt(attrs, "ActorNum", config.CheckIntGT0).Right()
 	shrink := config.GetAttrInt(attrs, "Shrink", config.CheckIntGT0).Right()
 
-	actorCfg, ok := cfg.Actors[actorSchema]
+	actorCfg, ok := cfg.(*config.Config).ActorMap[actorSchema]
 	if !ok {
 		ret.Error(fmt.Errorf("no actor cfg found: %s", actorSchema))
 		return ret
@@ -44,11 +44,11 @@ func (this defaultRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 	}
 	newRouter := &defaultRouter{
 		actorsNum: actorNum,
-		actors:    make([]actor.Actor, 0, 0),
+		actors:    make([]interfaces.Actor, 0, 0),
 		shrink:    shrink,
 	}
 	for i := 0; i < actorNum; i++ {
-		newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right()
+		newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(interfaces.MaybeActor).Right()
 		newActor.SetRouter(newRouter)
 		newRouter.actors = append(newRouter.actors, newActor)
 	}
@@ -64,8 +64,8 @@ func (this defaultRouter) Start() {
 	}
 }
 
-//go:noescape
-func (this defaultRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
+////go:noescape
+func (this defaultRouter) Route(msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	seed := msg.GetHostId()
 	if seed < 0 {
 		err.Error(fmt.Errorf("illegal hash seed: %d", seed))
@@ -81,7 +81,7 @@ func (this defaultRouter) SimRoute(seed int64, actorsNum int) int64 {
 	return (seed / int64(this.shrink)) % int64(actorsNum)
 }
 
-func (this defaultRouter) GetActors() []actor.Actor {
+func (this defaultRouter) GetActors() []interfaces.Actor {
 	return this.actors
 }
 

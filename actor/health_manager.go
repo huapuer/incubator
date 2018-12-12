@@ -1,21 +1,22 @@
 package actor
 
 import (
-	"../common/maybe"
-	"../message"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/message"
 	"time"
 )
 
 type healthManager interface {
-	Start(Actor) maybe.MaybeError
+	Start(interfaces.Actor) maybe.MaybeError
 }
 
 type defaultHealthManager struct {
 	heartbeatIntvl time.Duration
 }
 
-func (this defaultHealthManager) Start(runner Actor) (err maybe.MaybeError) {
+func (this defaultHealthManager) Start(runner interfaces.Actor) (err maybe.MaybeError) {
 	if this.heartbeatIntvl <= 0 {
 		err.Error(fmt.Errorf("illegal heartbeat interval: %d", this.heartbeatIntvl))
 		return

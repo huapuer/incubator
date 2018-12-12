@@ -1,8 +1,8 @@
 package config
 
 import (
-	"../common/maybe"
 	"fmt"
+	"github.com/incubator/common/maybe"
 )
 
 func CheckInt32GT0(key string, val int32) (err maybe.MaybeError) {

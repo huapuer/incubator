@@ -2,7 +2,7 @@ package global
 
 import (
 	"fmt"
-	"incubator/common/maybe"
+	"github.com/incubator/common/maybe"
 	"sync"
 )
 

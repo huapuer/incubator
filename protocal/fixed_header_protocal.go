@@ -1,9 +1,8 @@
 package protocal
 
 import (
-	"../config"
-	"../message"
-	"../serialization"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/serialization"
 	"unsafe"
 )
 
@@ -17,14 +16,14 @@ func init() {
 
 type fixedHeaderProtocal struct{}
 
-func (this fixedHeaderProtocal) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeProtocal{}
+func (this fixedHeaderProtocal) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeProtocal{}
 	ret.Value(&fixedHeaderProtocal{})
 	return ret
 }
 
-//go:noescape
-func (this *fixedHeaderProtocal) Pack(msg message.RemoteMessage) (ret []byte) {
+////go:noescape
+func (this *fixedHeaderProtocal) Pack(msg interfaces.RemoteMessage) (ret []byte) {
 	bytes := serialization.Marshal(msg)
 	lth := len(bytes) + 1 + int(unsafe.Sizeof(int32(0)))
 

@@ -1,11 +1,11 @@
 package host
 
 import (
-	"../common/maybe"
-	"../config"
-	"../message"
-	"../serialization"
-	"../storage"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/message"
+	"github.com/incubator/serialization"
+	"github.com/incubator/storage"
 	"unsafe"
 )
 
@@ -22,13 +22,13 @@ type defaultLinkHost struct {
 	commonLinkHost
 }
 
-func (this *defaultLinkHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this *defaultLinkHost) Receive(msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	message.Route(msg).Test()
 	return
 }
 
-func (this defaultLinkHost) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeHost{}
+func (this defaultLinkHost) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeHost{}
 	//TODO: real logic
 	ret.Value(&defaultLinkHost{
 		commonHost:     commonHost{},
@@ -42,14 +42,14 @@ func (this defaultLinkHost) GetSize() int32 {
 }
 
 func (this defaultLinkHost) Get(key int64, ptr unsafe.Pointer) bool {
-	var h Host
+	var h interfaces.Host
 	h = &defaultLinkHost{}
 	serialization.Ptr2IFace(&h, ptr)
 	return h.GetId() == key
 }
 
 func (this defaultLinkHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
-	var h Host
+	var h interfaces.Host
 	h = &defaultLinkHost{}
 	serialization.Ptr2IFace(&h, dst)
 	if h.GetId() == storage.DENSE_TABLE_ELEMENT_STATE_EMPTY {
@@ -60,7 +60,7 @@ func (this defaultLinkHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
 }
 
 func (this defaultLinkHost) Erase(key int64, ptr unsafe.Pointer) bool {
-	var h Host
+	var h interfaces.Host
 	h = &defaultLinkHost{}
 	serialization.Ptr2IFace(&h, ptr)
 	if h.GetId() == key {

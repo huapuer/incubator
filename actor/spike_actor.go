@@ -1,11 +1,11 @@
 package actor
 
 import (
-	"../common/maybe"
-	"../config"
-	"../message"
 	"context"
 	"errors"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
 	"sync"
 	"time"
 )
@@ -28,8 +28,8 @@ type spikeActor struct {
 	mutex *sync.Mutex
 }
 
-func (this spikeActor) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeActor{}
+func (this spikeActor) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeActor{}
 
 	heartbeatIntvl := config.GetAttrInt64(attrs, "HeartbeatIntvl", config.CheckInt64GT0).Right()
 
@@ -38,7 +38,7 @@ func (this spikeActor) New(attrs interface{}, cfg config.Config) config.IOC {
 			heartbeatIntvl: time.Duration(heartbeatIntvl),
 		},
 	}
-	actor.mailBox.Init(attrs, cfg).Test()
+	actor.mailBox.Init(attrs, cfg.(*config.Config)).Test()
 
 	ret.Value(actor)
 	return ret
@@ -57,7 +57,7 @@ func (this *spikeActor) Start(ctx context.Context) (err maybe.MaybeError) {
 	return
 }
 
-func (this *spikeActor) Receive(msg message.Message) (err maybe.MaybeError) {
+func (this *spikeActor) Receive(msg interfaces.Message) (err maybe.MaybeError) {
 	if this.mailbox == nil {
 		err.Error(errors.New("mailbox not inited."))
 		return

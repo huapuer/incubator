@@ -1,9 +1,8 @@
 package protocal
 
 import (
-	"../config"
-	"../message"
-	"../serialization"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/serialization"
 )
 
 const (
@@ -16,14 +15,14 @@ func init() {
 
 type variantBytesProtocal struct{}
 
-func (this variantBytesProtocal) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeProtocal{}
+func (this variantBytesProtocal) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeProtocal{}
 	ret.Value(&fixedHeaderProtocal{})
 	return ret
 }
 
-//go:noescape
-func (this *variantBytesProtocal) Pack(msg message.RemoteMessage) (ret []byte) {
+////go:noescape
+func (this *variantBytesProtocal) Pack(msg interfaces.RemoteMessage) (ret []byte) {
 	bytes := serialization.Marshal(msg)
 
 	var (

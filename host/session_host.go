@@ -1,10 +1,10 @@
 package host
 
 import (
-	"../common/maybe"
-	"../config"
-	"../message"
-	"../serialization"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/serialization"
 	"net"
 	"unsafe"
 )
@@ -23,7 +23,7 @@ type defaultSessionHost struct {
 	peer net.Conn
 }
 
-func (this *defaultSessionHost) Receive(msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this *defaultSessionHost) Receive(msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	_, e := this.peer.Write(serialization.Marshal(msg))
 	if e != nil {
 		err.Error(e)
@@ -41,13 +41,13 @@ func (this *defaultSessionHost) SetPeer(conn net.Conn) {
 	return
 }
 
-func (this defaultSessionHost) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeHost{}
+func (this defaultSessionHost) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeHost{}
 	ret.Value(&defaultSessionHost{})
 	return ret
 }
 
-func (this *defaultSessionHost) Replicate() (ret MaybeHost) {
+func (this *defaultSessionHost) Replicate() (ret interfaces.MaybeHost) {
 	new := *this
 	ret.Value(&new)
 	return

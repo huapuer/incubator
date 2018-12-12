@@ -4,7 +4,7 @@
     "Id":0,
     "StartMode":0,
     "Class":"layer.defaultLayer",
-    "SuperLayer":-1,
+    "SuperLayer":0,
     "Attributes":{
       "TopoSchema":1
     }
@@ -12,7 +12,8 @@
 
   "Services":[
     {
-      "ServerSchema":1
+      "ServerSchema":1,
+      "Port":8888
     }
   ],
 
@@ -22,7 +23,6 @@
       "Class":"network.sessionServer",
       "Attributes":{
         "Network":"tcp",
-        "Port":8888,
         "Protocal":"protocal.fixedHeaderProtocal"
       }
     }

@@ -1,34 +1,13 @@
 package serialization
 
 import (
-	"../common/maybe"
-	"../message"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 	"unsafe"
 )
 
-type Serializable interface {
-	GetSize() int32
-	GetJsonBytes() maybe.MaybeBytes
-	SetJsonField([]byte) maybe.MaybeError
-}
-
-type MaybeSerializable struct {
-	maybe.MaybeError
-	value Serializable
-}
-
-func (this MaybeSerializable) Value(value Serializable) {
-	this.Error(nil)
-	this.value = value
-}
-
-func (this MaybeSerializable) Right() Serializable {
-	this.Test()
-	return this.value
-}
-
-//go:noescape
-func Marshal(obj Serializable) (ret []byte) {
+////go:noescape
+func Marshal(obj interfaces.Serializable) (ret []byte) {
 	mi := (*mimicIFace)(unsafe.Pointer(&obj))
 
 	size := obj.GetSize()
@@ -45,8 +24,8 @@ func Marshal(obj Serializable) (ret []byte) {
 	return
 }
 
-//go:noescape
-func Unmarshal(data []byte, obj Serializable) (err maybe.MaybeError) {
+////go:noescape
+func Unmarshal(data []byte, obj interfaces.Serializable) (err maybe.MaybeError) {
 	lth := int32(len(data))
 	lval := obj.GetSize()
 
@@ -64,8 +43,8 @@ func Unmarshal(data []byte, obj Serializable) (err maybe.MaybeError) {
 	return
 }
 
-//go:noescape
-func UnmarshalRemoteMessage(data []byte, msg message.RemoteMessage) (err maybe.MaybeError) {
+////go:noescape
+func UnmarshalRemoteMessage(data []byte, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	lth := int32(len(data))
 	lval := msg.GetSize()
 

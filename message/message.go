@@ -1,38 +1,15 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../layer"
-	"../serialization"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/serialization"
 )
 
-var (
-	messagePrototype = make(map[string]RemoteMessage)
-)
-
-func RegisterMessagePrototype(name string, val RemoteMessage) (err maybe.MaybeError) {
-	if _, ok := messagePrototype[name]; ok {
-		err.Error(fmt.Errorf("message prototype redefined: %s", name))
-		return
-	}
-	messagePrototype[name] = val
-	return
-}
-
-func GetMessagePrototype(name string) (ret MaybeRemoteMessage) {
-	if msg, ok := messagePrototype[name]; ok {
-		ret.Value(msg)
-		return
-	}
-	ret.Error(fmt.Errorf("message prototype not found: %s", name))
-	return
-}
-
-//go:noescape
+////go:noescape
 func RoutePackage(data []byte, layerId uint8, typ uint8) (err maybe.MaybeError) {
-	l := layer.GetLayer(int32(layerId)).Right()
+	l := interfaces.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
 	serialization.UnmarshalRemoteMessage(data, msg).Test()
 	router := l.GetRouter(int32(typ)).Right()
@@ -40,65 +17,31 @@ func RoutePackage(data []byte, layerId uint8, typ uint8) (err maybe.MaybeError) 
 	return
 }
 
-//go:noescape
-func Route(m RemoteMessage) (err maybe.MaybeError) {
-	l := layer.GetLayer(int32(m.GetLayer())).Right()
+////go:noescape
+func Route(m interfaces.RemoteMessage) (err maybe.MaybeError) {
+	l := interfaces.GetLayer(int32(m.GetLayer())).Right()
 	router := l.GetRouter(int32(m.GetType())).Right()
 	router.Route(m).Test()
 	return
 }
 
-func SendToHost(m RemoteMessage) (err maybe.MaybeError) {
+func SendToHost(m interfaces.RemoteMessage) (err maybe.MaybeError) {
 	if m.GetHostId() <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", m.GetHostId()))
 	}
-	layer.GetLayer(int32(m.GetLayer())).Right().GetTopo().SendToHost(m.GetHostId(), m).Test()
+	interfaces.GetLayer(int32(m.GetLayer())).Right().GetTopo().SendToHost(m.GetHostId(), m).Test()
 	return
 }
 
-func SendToLink(m RemoteMessage, guestId int64) (err maybe.MaybeError) {
+func SendToLink(m interfaces.RemoteMessage, guestId int64) (err maybe.MaybeError) {
 	if m.GetHostId() <= 0 {
 		err.Error(fmt.Errorf("illegal host id: %d", m.GetHostId()))
 	}
 	if guestId <= 0 {
 		err.Error(fmt.Errorf("illegal guest id: %d", guestId))
 	}
-	layer.GetLayer(int32(m.GetLayer())).Right().GetTopo().SendToLink(m.GetHostId(), guestId, m).Test()
+	interfaces.GetLayer(int32(m.GetLayer())).Right().GetTopo().SendToLink(m.GetHostId(), guestId, m).Test()
 	return
-}
-
-type Message interface {
-	Process(actor.Actor) maybe.MaybeError
-}
-
-type RemoteMessage interface {
-	Message
-	serialization.Serializable
-
-	SetLayer(int8) maybe.MaybeError
-	GetLayer() int8
-	SetType(int8) maybe.MaybeError
-	GetType() int8
-	Master(int8)
-	IsMaster() int8
-	GetHostId() int64
-	SetHostId(int64) maybe.MaybeError
-}
-
-type MaybeRemoteMessage struct {
-	maybe.MaybeError
-
-	value RemoteMessage
-}
-
-func (this MaybeRemoteMessage) Value(value RemoteMessage) {
-	this.Error(nil)
-	this.value = value
-}
-
-func (this MaybeRemoteMessage) Right() RemoteMessage {
-	this.Test()
-	return this.value
 }
 
 const (
@@ -161,15 +104,6 @@ func (this *commonMessage) SetHostId(hostId int64) (err maybe.MaybeError) {
 	return
 }
 
-type EchoMessage interface {
-	Message
-
-	SetSrcLayer(int8) maybe.MaybeError
-	GetSrcLayer() int8
-	GetSrcHostId() maybe.MaybeInt64
-	SetSrcHostId(int64) maybe.MaybeError
-}
-
 type commonEchoMessage struct {
 	commonMessage
 
@@ -204,7 +138,7 @@ func (this *commonEchoMessage) SetSrcHostId(hostId int64) (err maybe.MaybeError)
 }
 
 type LinkMessage interface {
-	RemoteMessage
+	interfaces.RemoteMessage
 
 	SetGuestId(int64)
 	GetGuestId() int64

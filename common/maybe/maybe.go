@@ -3,7 +3,8 @@
 package maybe
 
 import (
-	"github.com/sirupsen/logrus"
+	//log "github.com/sirupsen/logrus"
+	"log"
 )
 
 type NilValueError struct {
@@ -17,7 +18,7 @@ func (this NilValueError) Error() string {
 func TryCatch(try func(), catch func(error)) {
 	defer func() {
 		if err := recover(); err != nil {
-			logrus.Errorf("err=%+v", err)
+			log.Fatalf("err=%+v", err)
 			if catch != nil {
 				catch(err.(error))
 			}
@@ -176,7 +177,7 @@ func (this *MaybeBytes) Value(value []byte) {
 	this.value = value
 }
 
-func (this *MaybeBytes) Right() []byte {
+func (this MaybeBytes) Right() []byte {
 	this.Test()
 	return this.value
 }

@@ -1,11 +1,10 @@
 package layer
 
 import (
-	"../config"
-	"../network"
-	"../topo"
 	"context"
 	"fmt"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
 )
 
 const (
@@ -13,42 +12,42 @@ const (
 )
 
 func init() {
-	RegisterLayerPrototype(defaultLayerClassName, &defaultLayer{})
+	interfaces.RegisterLayerPrototype(defaultLayerClassName, &defaultLayer{})
 }
 
 type defaultLayer struct {
 	CommonLayer
 
-	topo topo.Topo
+	topo interfaces.Topo
 }
 
-func (this *defaultLayer) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeLayer{}
+func (this *defaultLayer) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeLayer{}
 
 	layer := &defaultLayer{
 		CommonLayer: CommonLayer{},
 	}
 
-	layer.Init(attrs, cfg).Test()
+	layer.Init(attrs, cfg.(*config.Config)).Test()
 
 	topoSchema := config.GetAttrInt32(attrs, "TopoSchema", config.CheckInt32GT0).Right()
 
-	topoCfg, ok := cfg.Topos[topoSchema]
+	topoCfg, ok := cfg.(*config.Config).TopoMap[topoSchema]
 	if !ok {
 		ret.Error(fmt.Errorf("topo cfg not found: %d", topoSchema))
 		return ret
 	}
 
-	layer.topo = topo.GetTopoPrototype(topoCfg.Class).Right().New(topoCfg.Attributes, cfg).(topo.Topo)
+	layer.topo = interfaces.GetTopoPrototype(topoCfg.Class).Right().New(topoCfg.Attributes, cfg).(interfaces.Topo)
 
-	this.services = make([]network.Server, 0, 0)
-	for _, service := range cfg.Services {
-		serverCfg, ok := cfg.Servers[service.ServerSchema]
+	this.services = make([]interfaces.Server, 0, 0)
+	for _, service := range cfg.(*config.Config).Services {
+		serverCfg, ok := cfg.(*config.Config).ServerMap[service.ServerSchema]
 		if !ok {
 			ret.Error(fmt.Errorf("server config not found for schema: %d", service.ServerSchema))
 			return ret
 		}
-		server := network.GetServerPrototype(serverCfg.Class).Right().New(serverCfg.Attributes, cfg).(network.Server)
+		server := interfaces.GetServerPrototype(serverCfg.Class).Right().New(serverCfg.Attributes, cfg).(interfaces.Server)
 		server.SetPort(service.Port)
 		this.services = append(this.services, server)
 	}
@@ -68,11 +67,11 @@ func (this defaultLayer) Start() {
 	this.topo.Start()
 }
 
-func (this defaultLayer) GetTopo() topo.Topo {
+func (this defaultLayer) GetTopo() interfaces.Topo {
 	return this.topo
 }
 
-func (this defaultLayer) GetService(idx int32) (ret network.MaybeServer) {
+func (this defaultLayer) GetService(idx int32) (ret interfaces.MaybeServer) {
 	if idx < 0 || int(idx) > len(this.services) {
 		ret.Error(fmt.Errorf("service not found: %d", idx))
 		return

@@ -1,8 +1,8 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 	"time"
 	"unsafe"
 )
@@ -11,7 +11,7 @@ type ActorHeartbeatMessage struct {
 	Interval time.Duration
 }
 
-func (this *ActorHeartbeatMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+func (this *ActorHeartbeatMessage) Process(runner interfaces.Actor) (err maybe.MaybeError) {
 	runner.SetState(runner, "health_intvl", this.Interval, 0, nil)
 	runner.SetState(runner, "health_til", time.Now().Unix(), 0, nil)
 

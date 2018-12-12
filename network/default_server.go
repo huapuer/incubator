@@ -1,12 +1,12 @@
 package network
 
 import (
-	"../common/maybe"
-	"../config"
-	"../layer"
-	"../message"
-	"../protocal"
-	"../serialization"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/message"
+	"github.com/incubator/protocal"
+	"github.com/incubator/serialization"
 	"net"
 )
 
@@ -15,15 +15,15 @@ const (
 )
 
 func init() {
-	RegisterServerPrototype(defaultServerClassName, &defaultServer{}).Test()
+	interfaces.RegisterServerPrototype(defaultServerClassName, &defaultServer{}).Test()
 }
 
 type defaultServer struct {
 	commonServer
 }
 
-func (this defaultServer) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeServer{}
+func (this defaultServer) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeServer{}
 
 	network := config.GetAttrString(attrs, "Network", config.CheckStringNotEmpty).Right()
 	handlerNum := config.GetAttrInt(attrs, "HandlerNum", config.CheckIntGT0).Right()
@@ -41,12 +41,12 @@ func (this defaultServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
-//go:noescape
-func (this defaultServer) handlePackage(data []byte, c net.Conn) (err maybe.MaybeError) {
+////go:noescape
+func (this defaultServer) HandlePackage(data []byte, c net.Conn) (err maybe.MaybeError) {
 	layerId := data[0]
 	typ := data[1]
 
-	l := layer.GetLayer(int32(layerId)).Right()
+	l := interfaces.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
 	serialization.UnmarshalRemoteMessage(data, msg).Test()
 

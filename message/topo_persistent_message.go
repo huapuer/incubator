@@ -1,11 +1,10 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../layer"
-	"../persistence"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/persistence"
 	"time"
 	"unsafe"
 )
@@ -15,7 +14,7 @@ const (
 )
 
 func init() {
-	RegisterMessagePrototype(TopoPersistentMessageClassName, &TopoPersistentMessage{
+	interfaces.RegisterMessagePrototype(TopoPersistentMessageClassName, &TopoPersistentMessage{
 		commonMessage: commonMessage{
 			layerId: -1,
 			typ:     -1,
@@ -34,13 +33,13 @@ type TopoPersistentMessage struct {
 	interval        time.Duration
 }
 
-func (this *TopoPersistentMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+func (this *TopoPersistentMessage) Process(runner interfaces.Actor) (err maybe.MaybeError) {
 	runner.SetState(runner, fmt.Sprintf("topo_%d_persistent_touch", this.layer), true, this.interval,
-		func(runner actor.Actor) {
+		func(runner interfaces.Actor) {
 			runner.Receive(this)
 		}).Test()
 
-	pa, ok := layer.GetLayer(this.layer).Right().GetTopo().(persistence.Persistentable)
+	pa, ok := interfaces.GetLayer(this.layer).Right().GetTopo().(persistence.Persistentable)
 	if !ok {
 		err.Error(fmt.Errorf("topo of layer(%d) is not persistentable", this.layer))
 		return

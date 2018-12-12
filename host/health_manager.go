@@ -1,21 +1,12 @@
 package host
 
 import (
-	"../common/maybe"
-	"../layer"
-	"../message"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/message"
 	"time"
 )
-
-type HealthManager interface {
-	IsHealth() bool
-	Heartbeat()
-	Health()
-	Start() maybe.MaybeError
-	GetLayer() int32
-	SetLayer(int32)
-}
 
 type defaultHealthManager struct {
 	checkIntvl     time.Duration
@@ -57,7 +48,7 @@ func (this *defaultHealthManager) Start() (err maybe.MaybeError) {
 	this.lastHealthTime = time.Now()
 
 	go func() {
-		l := layer.GetLayer(this.layer).Right()
+		l := interfaces.GetLayer(this.layer).Right()
 		for {
 			for _, h := range l.GetTopo().GetRemoteHosts() {
 				msg := &message.HealthCheckReqMessage{}

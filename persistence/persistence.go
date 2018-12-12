@@ -1,10 +1,10 @@
 package persistence
 
 import (
-	"../common/maybe"
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/incubator/common/maybe"
 	"io/ioutil"
 	"math"
 	"os"

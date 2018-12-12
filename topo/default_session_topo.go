@@ -1,11 +1,11 @@
 package topo
 
 import (
-	"../common/maybe"
-	"../config"
-	"../host"
-	"../message"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/host"
+	"github.com/incubator/interfaces"
 	"net"
 	"unsafe"
 )
@@ -15,7 +15,7 @@ const (
 )
 
 func init() {
-	RegisterTopoPrototype(defaultSessionTopoClassName, &defaultSessionTopo{}).Test()
+	interfaces.RegisterTopoPrototype(defaultSessionTopoClassName, &defaultSessionTopo{}).Test()
 }
 
 type defaultSessionTopo struct {
@@ -24,15 +24,15 @@ type defaultSessionTopo struct {
 	hostCanon  host.SessionHost
 }
 
-func (this defaultSessionTopo) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeTopo{}
+func (this defaultSessionTopo) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeTopo{}
 	topo := &defaultSessionTopo{
 		hosts: make(map[int64]host.SessionHost),
 	}
 
 	topo.hostSchema = config.GetAttrInt32(attrs, "LocalHostSchema", config.CheckInt32GT0).Right()
 
-	localHostCfg, ok := cfg.Hosts[topo.hostSchema]
+	localHostCfg, ok := cfg.(*config.Config).HostMap[topo.hostSchema]
 	if !ok {
 		ret.Error(fmt.Errorf("no local host cfg found: %d", topo.hostSchema))
 		return ret
@@ -56,7 +56,7 @@ func (this *defaultSessionTopo) AddHost(id int64, conn net.Conn) (err maybe.Mayb
 	return
 }
 
-func (this defaultSessionTopo) SendToHost(id int64, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this defaultSessionTopo) SendToHost(id int64, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	host, ok := this.hosts[id]
 	if !ok {
 		err.Error(fmt.Errorf("no host found: %d", id))
@@ -69,11 +69,11 @@ func (this defaultSessionTopo) SendToHost(id int64, msg message.RemoteMessage) (
 	return
 }
 
-func (this defaultSessionTopo) LookupHost(id int64) (ret host.MaybeHost) {
+func (this defaultSessionTopo) LookupHost(id int64) (ret interfaces.MaybeHost) {
 	panic("not implemented")
 }
 
-func (this defaultSessionTopo) SendToLink(hid int64, gid int64, msg message.RemoteMessage) (err maybe.MaybeError) {
+func (this defaultSessionTopo) SendToLink(hid int64, gid int64, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	panic("not implemented")
 }
 
@@ -81,7 +81,7 @@ func (this defaultSessionTopo) TraverseOutLinksOfHost(hid int64, callback func(p
 	panic("not implemented")
 }
 
-func (this defaultSessionTopo) GetRemoteHosts() []host.Host {
+func (this defaultSessionTopo) GetRemoteHosts() []interfaces.Host {
 	panic("not implemented")
 }
 

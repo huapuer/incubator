@@ -1,13 +1,11 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../config"
-	"../host"
-	"../layer"
-	"../serialization"
 	"errors"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/serialization"
 	"net"
 	"unsafe"
 )
@@ -17,7 +15,7 @@ const (
 )
 
 func init() {
-	RegisterMessagePrototype(HealthCheckRespMessageClassName, &HealthCheckRespMessage{
+	interfaces.RegisterMessagePrototype(HealthCheckRespMessageClassName, &HealthCheckRespMessage{
 		commonMessage: commonMessage{
 			layerId: -1,
 			typ:     -1,
@@ -36,11 +34,11 @@ type HealthCheckRespMessage struct {
 	addr string
 }
 
-func (this *HealthCheckRespMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
-	l := layer.GetLayer(int32(this.GetLayer())).Right()
+func (this *HealthCheckRespMessage) Process(runner interfaces.Actor) (err maybe.MaybeError) {
+	l := interfaces.GetLayer(int32(this.GetLayer())).Right()
 	if this.health {
 		hm, ok := l.GetTopo().LookupHost(this.GetHostId()).
-			Right().(host.HealthManager)
+			Right().(interfaces.HealthManager)
 		if !ok {
 			err.Error(errors.New("host is not HealthManager"))
 			return
@@ -48,14 +46,14 @@ func (this *HealthCheckRespMessage) Process(runner actor.Actor) (err maybe.Maybe
 		hm.Health()
 	} else {
 		cfg := l.GetConfig()
-		cfg.Layer.StartMode = config.LAYER_START_MODE_RECOVER
+		cfg.(*config.Config).Layer.StartMode = config.LAYER_START_MODE_RECOVER
 		msg := &PullUpMessage{
 			Version: this.version,
-			Cfg:     l.GetConfig(),
+			Cfg:     l.GetConfig().(*config.Config),
 		}
 		msg.SetLayer(int8(l.GetSuperLayer()))
 
-		sl := layer.GetLayer(l.GetSuperLayer()).Right()
+		sl := interfaces.GetLayer(l.GetSuperLayer()).Right()
 		msg.SetType(int8(sl.GetMessageType(msg).Right()))
 
 		conn, e := net.Dial("tcp", this.addr)

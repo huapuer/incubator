@@ -1,13 +1,13 @@
 package network
 
 import (
-	"../common/maybe"
-	"../config"
-	"../layer"
-	"../message"
-	"../protocal"
-	"../serialization"
-	"../topo"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/message"
+	"github.com/incubator/protocal"
+	"github.com/incubator/serialization"
+	"github.com/incubator/topo"
 	"math/rand"
 	"net"
 )
@@ -17,15 +17,15 @@ const (
 )
 
 func init() {
-	RegisterServerPrototype(sessionServerClassName, &defaultServer{}).Test()
+	interfaces.RegisterServerPrototype(sessionServerClassName, &defaultServer{}).Test()
 }
 
 type sessionServer struct {
 	commonServer
 }
 
-func (this sessionServer) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeServer{}
+func (this sessionServer) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeServer{}
 
 	network := config.GetAttrString(attrs, "Network", config.CheckStringNotEmpty).Right()
 	protocalClass := config.GetAttrString(attrs, "Protocal", config.CheckStringNotEmpty).Right()
@@ -41,19 +41,19 @@ func (this sessionServer) New(attrs interface{}, cfg config.Config) config.IOC {
 	return ret
 }
 
-//go:noescape
-func (this sessionServer) handlePackage(data []byte, c net.Conn) (err maybe.MaybeError) {
+////go:noescape
+func (this sessionServer) HandlePackage(data []byte, c net.Conn) (err maybe.MaybeError) {
 	layerId := data[0]
 	typ := data[1]
 
-	l := layer.GetLayer(int32(layerId)).Right()
+	l := interfaces.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
 	serialization.UnmarshalRemoteMessage(data, msg).Test()
 
 	sessId := rand.Int63()
 
 	l.GetTopo().(topo.SessionTopo).AddHost(sessId, c).Test()
-	msg.(message.RemoteMessage).SetHostId(sessId)
+	msg.(interfaces.RemoteMessage).SetHostId(sessId)
 	message.Route(msg).Test()
 	return
 }

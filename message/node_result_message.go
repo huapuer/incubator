@@ -1,10 +1,10 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
 	"encoding/json"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 	"unsafe"
 )
 
@@ -13,7 +13,7 @@ const (
 )
 
 func init() {
-	RegisterMessagePrototype(NodeResultMessageClassName, &NodeResultMessage{
+	interfaces.RegisterMessagePrototype(NodeResultMessageClassName, &NodeResultMessage{
 		commonMessage: commonMessage{
 			layerId: -1,
 			typ:     -1,
@@ -32,7 +32,7 @@ type NodeResultMessage struct {
 	}
 }
 
-func (this *NodeResultMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+func (this *NodeResultMessage) Process(runner interfaces.Actor) (err maybe.MaybeError) {
 	fmt.Printf("node: %s, msg: %s", this.info.addr, this.info.msg)
 	error.Error(nil)
 	return

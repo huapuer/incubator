@@ -1,15 +1,13 @@
 package router
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../config"
-	"../message"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 	"runtime"
 )
 
 const (
-	spikeRouterClassName = "router.defaultRouter"
+	spikeRouterClassName = "router.spikeRouter"
 )
 
 func init() {
@@ -20,12 +18,12 @@ type spikeRouter struct {
 	router defaultRouter
 }
 
-func (this spikeRouter) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeRouter{}
+func (this spikeRouter) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeRouter{}
 
 	maybe.TryCatch(
 		func() {
-			r := defaultRouter{}.New(attrs, cfg).(MaybeRouter).Right()
+			r := defaultRouter{}.New(attrs, cfg).(interfaces.MaybeRouter).Right()
 			ret.Value(&spikeRouter{r.(defaultRouter)})
 		},
 		func(err error) {
@@ -39,8 +37,8 @@ func (this spikeRouter) Start() {
 	this.router.Start()
 }
 
-//go:noescape
-func (this spikeRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
+////go:noescape
+func (this spikeRouter) Route(msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	maybe.TryCatch(
 		func() {
 			this.router.Route(msg).Test()
@@ -57,7 +55,7 @@ func (this spikeRouter) SimRoute(seed int64, actorsNum int) int64 {
 	return this.router.SimRoute(seed, actorsNum)
 }
 
-func (this spikeRouter) GetActors() []actor.Actor {
+func (this spikeRouter) GetActors() []interfaces.Actor {
 	return this.router.GetActors()
 }
 

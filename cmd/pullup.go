@@ -1,14 +1,14 @@
 package main
 
 import (
-	"../config"
-	"../layer"
-	"../message"
-	"../serialization"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/message"
+	"github.com/incubator/serialization"
 	"io/ioutil"
 	"net"
 	"os"
@@ -48,7 +48,7 @@ func main() {
 	}
 	groundCfg.Process().Test()
 
-	groundLayer := layer.GetLayer(groundCfg.Layer.Id).Right()
+	groundLayer := interfaces.GetLayer(groundCfg.Layer.Id).Right()
 
 	file, e = ioutil.ReadFile(*layerFile)
 	if e != nil {

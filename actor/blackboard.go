@@ -1,10 +1,11 @@
 package actor
 
 import (
-	"../common/maybe"
-	"../message"
 	"errors"
 	"fmt"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
+	"github.com/incubator/message"
 	"math/rand"
 	"time"
 )
@@ -18,7 +19,7 @@ type blackBoard struct {
 	token map[string]int64
 }
 
-func (this *blackBoard) SetState(runner Actor, key string, value interface{}, expire time.Duration, expireFunc func(Actor)) (err maybe.MaybeError) {
+func (this *blackBoard) SetState(runner interfaces.Actor, key string, value interface{}, expire time.Duration, expireFunc func(interfaces.Actor)) (err maybe.MaybeError) {
 	if this.data == nil {
 		this.data = make(map[string]interface{})
 	}

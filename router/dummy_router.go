@@ -1,13 +1,13 @@
 package router
 
 import (
-	"../actor"
-	"../common/maybe"
-	"../config"
-	"../message"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/incubator/actor"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/config"
+	"github.com/incubator/interfaces"
 )
 
 const (
@@ -19,15 +19,15 @@ func init() {
 }
 
 type dummyRouter struct {
-	actor actor.Actor
+	actor interfaces.Actor
 }
 
-func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
-	ret := MaybeRouter{}
+func (this dummyRouter) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
+	ret := interfaces.MaybeRouter{}
 
 	actorSchema := config.GetAttrInt32(attrs, "ActorSchema", config.CheckInt32GT0).Right()
 
-	actorCfg, ok := cfg.Actors[actorSchema]
+	actorCfg, ok := cfg.(*config.Config).ActorMap[actorSchema]
 	if !ok {
 		ret.Error(fmt.Errorf("no actor cfg found: %s", actorSchema))
 		return ret
@@ -40,7 +40,7 @@ func (this dummyRouter) New(attrs interface{}, cfg config.Config) config.IOC {
 		}
 	}
 	newRouter := &dummyRouter{}
-	newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(actor.MaybeActor).Right()
+	newActor := actor.GetActorPrototype(actorCfg.Class).Right().New(actorAttrs, cfg).(interfaces.MaybeActor).Right()
 	newActor.SetRouter(newRouter)
 	newRouter.actor = newActor
 
@@ -54,8 +54,8 @@ func (this dummyRouter) Start() {
 	this.actor.Start(ctx).Test()
 }
 
-//go:noescape
-func (this dummyRouter) Route(msg message.RemoteMessage) (err maybe.MaybeError) {
+////go:noescape
+func (this dummyRouter) Route(msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	if this.actor == nil {
 		err.Error(errors.New("actor not set"))
 		return
@@ -70,8 +70,8 @@ func (this dummyRouter) SimRoute(seed int64, actorsNum int) int64 {
 	return 0
 }
 
-func (this dummyRouter) GetActors() []actor.Actor {
-	return []actor.Actor{this.actor}
+func (this dummyRouter) GetActors() []interfaces.Actor {
+	return []interfaces.Actor{this.actor}
 }
 
 func (this dummyRouter) Stop() {

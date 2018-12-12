@@ -1,8 +1,8 @@
 package message
 
 import (
-	"../actor"
-	"../common/maybe"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 	"runtime"
 	"time"
 	"unsafe"
@@ -13,7 +13,7 @@ const (
 )
 
 func init() {
-	RegisterMessagePrototype(GCMessageClassName, &GCMessage{
+	interfaces.RegisterMessagePrototype(GCMessageClassName, &GCMessage{
 		commonMessage: commonMessage{
 			layerId: -1,
 			typ:     -1,
@@ -29,7 +29,7 @@ type GCMessage struct {
 	interval time.Duration
 }
 
-func (this *GCMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
+func (this *GCMessage) Process(runner interfaces.Actor) (err maybe.MaybeError) {
 	started := false
 	maybe.TryCatch(
 		func() {
@@ -40,7 +40,7 @@ func (this *GCMessage) Process(runner actor.Actor) (err maybe.MaybeError) {
 		return
 	}
 	runner.SetState(runner, "gc_started", true, this.interval,
-		func(runner actor.Actor) {
+		func(runner interfaces.Actor) {
 			runner.Receive(this)
 		}).Test()
 

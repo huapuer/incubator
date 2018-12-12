@@ -1,30 +1,29 @@
 package actor
 
 import (
-	"../common/maybe"
-	"../config"
-	"../message"
-	"../router"
 	"context"
 	"errors"
 	"fmt"
-	"time"
+	"github.com/incubator/common/maybe"
+	"github.com/incubator/interfaces"
 )
 
 var (
-	actorPrototype = make(map[string]Actor)
+	actorPrototype = make(map[string]interfaces.Actor)
 )
 
-func RegisterActorPrototype(name string, val Actor) (err maybe.MaybeError) {
+func RegisterActorPrototype(name string, val interfaces.Actor) (err maybe.MaybeError) {
 	if _, ok := actorPrototype[name]; ok {
 		err.Error(fmt.Errorf("actor prototype redefined: %s", name))
 		return
 	}
 	actorPrototype[name] = val
+
+	err.Error(nil)
 	return
 }
 
-func GetActorPrototype(name string) (ret MaybeActor) {
+func GetActorPrototype(name string) (ret interfaces.MaybeActor) {
 	if prototype, ok := actorPrototype[name]; ok {
 		ret.Value(prototype)
 		return
@@ -33,49 +32,15 @@ func GetActorPrototype(name string) (ret MaybeActor) {
 	return
 }
 
-type Actor interface {
-	config.IOC
-
-	Start(ctx context.Context) maybe.MaybeError
-	Receive(message.Message) maybe.MaybeError
-	GetState(string) maybe.MaybeEface
-	UnsetState(string) maybe.MaybeError
-	UnsetStateWithToken(string, int64) maybe.MaybeError
-	SetState(Actor, string, interface{}, time.Duration, func(Actor)) maybe.MaybeError
-	GetRouter() router.MaybeRouter
-	SetRouter(router router.Router) maybe.MaybeError
-	SetCancelFunc(context.CancelFunc)
-	Stop()
-}
-
-type MaybeActor struct {
-	maybe.MaybeError
-	value Actor
-}
-
-func (this MaybeActor) New(attrs interface{}, cfg config.Config) config.IOC {
-	panic("not implemented.")
-}
-
-func (this MaybeActor) Value(value Actor) {
-	this.Error(nil)
-	this.value = value
-}
-
-func (this MaybeActor) Right() Actor {
-	this.Test()
-	return this.value
-}
-
 type commonActor struct {
 	blackBoard
 
 	Topo   int32
-	r      router.Router
+	r      interfaces.Router
 	cancel context.CancelFunc
 }
 
-func (this commonActor) GetRouter() (ret router.MaybeRouter) {
+func (this commonActor) GetRouter() (ret interfaces.MaybeRouter) {
 	if this.r == nil {
 		ret.Error(errors.New("no router set"))
 	}
@@ -83,7 +48,7 @@ func (this commonActor) GetRouter() (ret router.MaybeRouter) {
 	return
 }
 
-func (this *commonActor) SetRouter(r router.Router) (err maybe.MaybeError) {
+func (this *commonActor) SetRouter(r interfaces.Router) (err maybe.MaybeError) {
 	if r == nil {
 		err.Error(errors.New("router is nil"))
 	}
