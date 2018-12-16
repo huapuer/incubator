@@ -22,6 +22,7 @@
       "Schema":1,
       "Class":"network.sessionServer",
       "Attributes":{
+        "HandlerNum":2,
         "Network":"tcp",
         "Protocal":"protocal.fixedHeaderProtocal"
       }
@@ -33,7 +34,7 @@
       "Schema": 1,
       "Class": "topo.defaultSessionTopo",
       "Attributes": {
-        "LocalHostSchema": 0
+        "LocalHostSchema": 1
       }
     }
   ],
@@ -61,12 +62,13 @@
       "Schema":1,
       "Class":"actor.defaultActor",
       "Attributes":{
-        "HeartbeatIntvl":100000
+        "MailBoxSize": 10,
+        "HeartbeatIntvl":10000
       }
     }
   ],
 
-  "Messages:":[
+  "Messages":[
     {
       "Type":1,
       "Class":"message.PullUpMessage",

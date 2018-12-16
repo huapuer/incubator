@@ -38,6 +38,11 @@ func (this *MaybeBool) Value(value bool) {
 	this.value = value
 }
 
+func (this MaybeBool) Right() bool {
+	this.Test()
+	return this.value
+}
+
 // MaybeInt
 type MaybeInt struct {
 	MaybeError
@@ -97,7 +102,7 @@ func (this *MaybeFloat32) Value(value float32) {
 	this.value = value
 }
 
-func (this *MaybeFloat32) Right() float32 {
+func (this MaybeFloat32) Right() float32 {
 	this.Test()
 	return this.value
 }
@@ -145,7 +150,7 @@ func (this *MaybeBytes) Value(value []byte) {
 	this.value = value
 }
 
-func (this *MaybeBytes) Right() []byte {
+func (this MaybeBytes) Right() []byte {
 	this.Test()
 	return this.value
 }

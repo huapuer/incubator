@@ -17,6 +17,8 @@ func RegisterServerPrototype(name string, val Server) (err maybe.MaybeError) {
 		return
 	}
 	serverPrototypes[name] = val
+
+	err.Error(nil)
 	return
 }
 
@@ -46,7 +48,7 @@ type MaybeServer struct {
 	value Server
 }
 
-func (this MaybeServer) Value(value Server) {
+func (this *MaybeServer) Value(value Server) {
 	this.Error(nil)
 	this.value = value
 }
@@ -74,7 +76,7 @@ type MaybeClient struct {
 	value Client
 }
 
-func (this MaybeClient) Value(value Client) {
+func (this *MaybeClient) Value(value Client) {
 	this.Error(nil)
 	this.value = value
 }

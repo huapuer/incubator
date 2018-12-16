@@ -38,18 +38,18 @@ func (this *defaultLayer) New(attrs interface{}, cfg interfaces.Config) interfac
 		return ret
 	}
 
-	layer.topo = interfaces.GetTopoPrototype(topoCfg.Class).Right().New(topoCfg.Attributes, cfg).(interfaces.Topo)
+	layer.topo = interfaces.GetTopoPrototype(topoCfg.Class).Right().New(topoCfg.Attributes, cfg).(interfaces.MaybeTopo).Right()
 
-	this.services = make([]interfaces.Server, 0, 0)
+	layer.services = make([]interfaces.Server, 0, 0)
 	for _, service := range cfg.(*config.Config).Services {
 		serverCfg, ok := cfg.(*config.Config).ServerMap[service.ServerSchema]
 		if !ok {
 			ret.Error(fmt.Errorf("server config not found for schema: %d", service.ServerSchema))
 			return ret
 		}
-		server := interfaces.GetServerPrototype(serverCfg.Class).Right().New(serverCfg.Attributes, cfg).(interfaces.Server)
+		server := interfaces.GetServerPrototype(serverCfg.Class).Right().New(serverCfg.Attributes, cfg).(interfaces.MaybeServer).Right()
 		server.SetPort(service.Port)
-		this.services = append(this.services, server)
+		layer.services = append(layer.services, server)
 	}
 
 	ret.Value(layer)

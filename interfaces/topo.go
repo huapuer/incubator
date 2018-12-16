@@ -16,6 +16,8 @@ func RegisterTopoPrototype(name string, val Topo) (err maybe.MaybeError) {
 		return
 	}
 	topoPrototypes[name] = val
+
+	err.Error(nil)
 	return
 }
 
@@ -24,7 +26,7 @@ func GetTopoPrototype(name string) (ret MaybeTopo) {
 		ret.Value(prototype)
 		return
 	}
-	ret.Error(fmt.Errorf("host prototype for class not found: %s", name))
+	ret.Error(fmt.Errorf("topo prototype for class not found: %s", name))
 	return
 }
 
@@ -50,7 +52,7 @@ type MaybeTopo struct {
 	value Topo
 }
 
-func (this MaybeTopo) Value(value Topo) {
+func (this *MaybeTopo) Value(value Topo) {
 	this.Error(nil)
 	this.value = value
 }

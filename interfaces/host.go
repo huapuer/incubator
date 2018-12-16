@@ -1,8 +1,34 @@
 package interfaces
 
 import (
+	"fmt"
 	"github.com/incubator/common/maybe"
+	"net"
 )
+
+var (
+	hostPrototypes = make(map[string]Host)
+)
+
+func RegisterHostPrototype(name string, val Host) (err maybe.MaybeError) {
+	if _, ok := hostPrototypes[name]; ok {
+		err.Error(fmt.Errorf("host prototype redefined: %s", name))
+		return
+	}
+	hostPrototypes[name] = val
+
+	err.Error(nil)
+	return
+}
+
+func GetHostPrototype(name string) (ret MaybeHost) {
+	if prototype, ok := hostPrototypes[name]; ok {
+		ret.Value(prototype)
+		return
+	}
+	ret.Error(fmt.Errorf("host prototype for class not found: %s", name))
+	return
+}
 
 type Host interface {
 	IOC
@@ -24,7 +50,7 @@ type MaybeHost struct {
 	value Host
 }
 
-func (this MaybeHost) Value(value Host) {
+func (this *MaybeHost) Value(value Host) {
 	this.Error(nil)
 	this.value = value
 }
@@ -36,4 +62,11 @@ func (this MaybeHost) Right() Host {
 
 func (this MaybeHost) New(attr interface{}, cfg Config) IOC {
 	panic("not implemented.")
+}
+
+type SessionHost interface {
+	Host
+
+	SetPeer(net.Conn)
+	Replicate() MaybeHost
 }

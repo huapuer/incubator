@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	defaultLocalHostClassName = "actor.defaultLocalHost"
+	defaultLocalHostClassName = "host.defaultLocalHost"
 )
 
 func init() {
-	RegisterHostPrototype(defaultLocalHostClassName, &defaultLocalHost{}).Test()
+	interfaces.RegisterHostPrototype(defaultLocalHostClassName, &defaultLocalHost{}).Test()
 }
 
 type defaultLocalHost struct {
@@ -40,14 +40,14 @@ func (this defaultLocalHost) GetSize() int32 {
 func (this defaultLocalHost) Get(key int64, ptr unsafe.Pointer) bool {
 	var h interfaces.Host
 	h = &defaultLocalHost{}
-	serialization.Ptr2IFace(&h, ptr)
+	serialization.Ptr2IFace(unsafe.Pointer(&h), ptr)
 	return h.GetId() == key
 }
 
 func (this defaultLocalHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
 	var h interfaces.Host
 	h = &defaultLocalHost{}
-	serialization.Ptr2IFace(&h, dst)
+	serialization.Ptr2IFace(unsafe.Pointer(&h), dst)
 	if h.GetId() == storage.DENSE_TABLE_ELEMENT_STATE_EMPTY {
 		serialization.Move(dst, src, int(this.GetSize()))
 		return true
@@ -58,7 +58,7 @@ func (this defaultLocalHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
 func (this defaultLocalHost) Erase(key int64, ptr unsafe.Pointer) bool {
 	var h interfaces.Host
 	h = &defaultLocalHost{}
-	serialization.Ptr2IFace(&h, ptr)
+	serialization.Ptr2IFace(unsafe.Pointer(&h), ptr)
 	if h.GetId() == key {
 		h.SetId(storage.DENSE_TABLE_ELEMENT_STATE_EMPTY)
 	}

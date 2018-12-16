@@ -1,4 +1,4 @@
-// +build !debug
+// +build release
 
 package maybe
 
@@ -129,7 +129,7 @@ func (this *MaybeFloat32) Value(value float32) {
 	this.value = value
 }
 
-func (this *MaybeFloat32) Right() float32 {
+func (this MaybeFloat32) Right() float32 {
 	this.Test()
 	return this.value
 }

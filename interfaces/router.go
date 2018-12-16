@@ -23,7 +23,7 @@ func (this MaybeRouter) New(attrs interface{}, cfg Config) IOC {
 	panic("not implemented.")
 }
 
-func (this MaybeRouter) Value(value Router) {
+func (this *MaybeRouter) Value(value Router) {
 	this.Error(nil)
 	this.value = value
 }

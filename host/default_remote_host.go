@@ -16,7 +16,7 @@ const (
 )
 
 func init() {
-	RegisterHostPrototype(defaultRemoteHostClassName, &defaultRemoteHost{}).Test()
+	interfaces.RegisterHostPrototype(defaultRemoteHostClassName, &defaultRemoteHost{}).Test()
 }
 
 type defaultRemoteHost struct {

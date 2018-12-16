@@ -2,7 +2,6 @@ package host
 
 import (
 	"github.com/incubator/common/maybe"
-	"github.com/incubator/config"
 	"github.com/incubator/interfaces"
 	"github.com/incubator/serialization"
 	"net"
@@ -10,11 +9,11 @@ import (
 )
 
 const (
-	defaultSessionHostClassName = "actor.defaultSessionHost"
+	defaultSessionHostClassName = "host.defaultSessionHost"
 )
 
 func init() {
-	RegisterHostPrototype(defaultSessionHostClassName, &defaultSessionHost{}).Test()
+	interfaces.RegisterHostPrototype(defaultSessionHostClassName, &defaultSessionHost{}).Test()
 }
 
 type defaultSessionHost struct {

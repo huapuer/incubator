@@ -5,8 +5,8 @@ package maybe
 import (
 	"fmt"
 	"runtime"
-
-	"github.com/sirupsen/logrus"
+	//"github.com/sirupsen/logrus"
+	"log"
 )
 
 type NilValueError struct {
@@ -56,22 +56,36 @@ type MaybeError struct {
 	err    error
 }
 
+type StackInfoErr struct {
+	stackInfo string
+	e         error
+}
+
+func (this StackInfoErr) Error() string {
+	return fmt.Sprintf("%s:%s", this.stackInfo, this.e)
+}
+
 func (this *MaybeError) Error(err error) {
-	this.err = err
 	if err == nil {
 		this.nonNil = true
+		return
+	}
+
+	this.err = &StackInfoErr{
+		stackInfo: getFormattedCaller(),
+		e:         err,
 	}
 }
 
 func (this MaybeError) Test() {
 	if this.err != nil {
-		logrus.Infof("[debugger]%s, %+v", getFormattedCaller(), this.err)
+		log.Printf("[debugger]%s", this.err)
 		panic(this.err)
 	}
 
 	if this.nonNil == false {
 		err := NilValueError{"Value not set."}
-		logrus.Infof("[debugger]%s, %+v", getFormattedCaller(), err)
+		log.Printf("[debugger]%s, %+v", getFormattedCaller(), err)
 		panic(err)
 	}
 }
@@ -137,7 +151,7 @@ func (this *MaybeInt64) Value(value int64) {
 
 func (this MaybeInt64) Right() int64 {
 	this.Test()
-	logrus.Infof("[debugger]%s, %d", getFormattedCaller(), this.value)
+	log.Printf("[debugger]%s, %d", getFormattedCaller(), this.value)
 	return this.value
 }
 
@@ -154,7 +168,7 @@ func (this *MaybeFloat32) Value(value float32) {
 
 func (this *MaybeFloat32) Right() float32 {
 	this.Test()
-	logrus.Infof("[debugger]%s, %f", getFormattedCaller(), this.value)
+	log.Printf("[debugger]%s, %f", getFormattedCaller(), this.value)
 	return this.value
 }
 
@@ -171,7 +185,7 @@ func (this *MaybeFloat64) Value(value float64) {
 
 func (this MaybeFloat64) Right() float64 {
 	this.Test()
-	logrus.Infof("[debugger]%s, %f", getFormattedCaller(), this.value)
+	log.Printf("[debugger]%s, %f", getFormattedCaller(), this.value)
 	return this.value
 }
 
@@ -188,7 +202,7 @@ func (this *MaybeString) Value(value string) {
 
 func (this MaybeString) Right() string {
 	this.Test()
-	logrus.Infof("[debugger]%s, %s", getFormattedCaller(), this.value)
+	log.Printf("[debugger]%s, %s", getFormattedCaller(), this.value)
 	return this.value
 }
 
@@ -203,9 +217,9 @@ func (this *MaybeBytes) Value(value []byte) {
 	this.value = value
 }
 
-func (this *MaybeBytes) Right() []byte {
+func (this MaybeBytes) Right() []byte {
 	this.Test()
-	logrus.Infof("[debugger]%s, %s", getFormattedCaller(), string(this.value))
+	log.Printf("[debugger]%s, %s", getFormattedCaller(), string(this.value))
 	return this.value
 }
 
@@ -222,6 +236,6 @@ func (this *MaybeEface) Value(value interface{}) {
 
 func (this MaybeEface) Right() interface{} {
 	this.Test()
-	logrus.Infof("[debugger]%s, %+v", getFormattedCaller(), this.value)
+	log.Printf("[debugger]%s, %+v", getFormattedCaller(), this.value)
 	return this.value
 }

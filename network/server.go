@@ -47,7 +47,7 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 
 	this.packageBuffer = make([]byte, this.readBufferSize, 0)
 
-	l, e := net.Listen(this.network, fmt.Sprint("%s:%d", "0.0.0.0", this.port))
+	l, e := net.Listen(this.network, fmt.Sprintf("0.0.0.0:%d", this.port))
 	if e != nil {
 		err.Error(e)
 		return
@@ -55,22 +55,28 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 	defer l.Close()
 	rand.Seed(time.Now().Unix())
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		}
-		c, err := l.Accept()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		maybe.TryCatch(func() {
-			for i := 0; i < this.handlerNum; i++ {
-				go this.HandleConnection(ctx, c)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				err.Error(nil)
+				return
 			}
-		}, nil)
-	}
+			c, e := l.Accept()
+			if e != nil {
+				err.Error(e)
+				return
+			}
+			maybe.TryCatch(func() {
+				for i := 0; i < this.handlerNum; i++ {
+					go this.HandleConnection(ctx, c)
+				}
+			}, nil)
+		}
+	}()
+
+	err.Error(nil)
+	return
 }
 
 func (this commonServer) HandleConnection(ctx context.Context, c net.Conn) {

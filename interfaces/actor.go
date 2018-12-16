@@ -30,7 +30,7 @@ func (this MaybeActor) New(attrs interface{}, cfg Config) IOC {
 	panic("not implemented.")
 }
 
-func (this MaybeActor) Value(value Actor) {
+func (this *MaybeActor) Value(value Actor) {
 	this.Error(nil)
 	this.value = value
 }

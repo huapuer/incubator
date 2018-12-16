@@ -84,21 +84,21 @@ type Config struct {
 		Class      string `json:"Class"`
 		Attributes interface{}
 	}
-	actors     []*Actor `json:"Actors"`
+	Actors     []*Actor `json:"Actors"`
 	ActorMap   map[int32]*Actor
-	routers    []*Router `json:"Routers"`
+	Routers    []*Router `json:"Routers"`
 	RouterMap  map[int32]*Router
-	messages   []*Message `json:"Messages"`
+	Messages   []*Message `json:"Messages"`
 	MessageMap map[int32]*Message
-	hosts      []*Host `json:"Hosts"`
+	Hosts      []*Host `json:"Hosts"`
 	HostMap    map[int32]*Host
-	links      []*Link `json:"Links"`
+	Links      []*Link `json:"Links"`
 	LinkMap    map[int32]*Link
-	topos      []*Topo `json:"Topos"`
+	Topos      []*Topo `json:"Topos"`
 	TopoMap    map[int32]*Topo
-	servers    []*Server `json:"Servers"`
+	Servers    []*Server `json:"Servers"`
 	ServerMap  map[int32]*Server
-	clients    []*Client `json:"Clients"`
+	Clients    []*Client `json:"Clients"`
 	ClientMap  map[int32]*Client
 }
 
@@ -108,16 +108,20 @@ func (this *Config) init() (err maybe.MaybeError) {
 	}
 
 	this.ActorMap = make(map[int32]*Actor)
-	for _, a := range this.actors {
+	for _, a := range this.Actors {
 		if a.Schema < 0 {
 			err.Error(fmt.Errorf("illegal actor schema: %d", a.Schema))
+			return
+		}
+		if _, ok := this.ActorMap[a.Schema]; ok {
+			err.Error(fmt.Errorf("actor already exists: %d", a.Schema))
 			return
 		}
 		this.ActorMap[a.Schema] = a
 	}
 
 	this.RouterMap = make(map[int32]*Router)
-	for _, r := range this.routers {
+	for _, r := range this.Routers {
 		if r.Id < 0 {
 			err.Error(fmt.Errorf("illegal router id: %d", r.Id))
 			return
@@ -130,7 +134,7 @@ func (this *Config) init() (err maybe.MaybeError) {
 	}
 
 	this.MessageMap = make(map[int32]*Message)
-	for _, m := range this.messages {
+	for _, m := range this.Messages {
 		if m.Type < 0 {
 			err.Error(fmt.Errorf("illegal message type: %d", m.Type))
 			return
@@ -143,45 +147,65 @@ func (this *Config) init() (err maybe.MaybeError) {
 	}
 
 	this.HostMap = make(map[int32]*Host)
-	for _, h := range this.hosts {
+	for _, h := range this.Hosts {
 		if h.Schema < 0 {
 			err.Error(fmt.Errorf("illegal host schema: %d", h.Schema))
+			return
+		}
+		if _, ok := this.HostMap[h.Schema]; ok {
+			err.Error(fmt.Errorf("host already exists: %d", h.Schema))
 			return
 		}
 		this.HostMap[h.Schema] = h
 	}
 
 	this.LinkMap = make(map[int32]*Link)
-	for _, l := range this.links {
+	for _, l := range this.Links {
 		if l.Schema < 0 {
 			err.Error(fmt.Errorf("illegal link schema: %d", l.Schema))
+			return
+		}
+		if _, ok := this.LinkMap[l.Schema]; ok {
+			err.Error(fmt.Errorf("link already exists: %d", l.Schema))
 			return
 		}
 		this.LinkMap[l.Schema] = l
 	}
 
 	this.TopoMap = make(map[int32]*Topo)
-	for _, t := range this.topos {
+	for _, t := range this.Topos {
 		if t.Schema < 0 {
 			err.Error(fmt.Errorf("illegal topo schema: %d", t.Schema))
+			return
+		}
+		if _, ok := this.TopoMap[t.Schema]; ok {
+			err.Error(fmt.Errorf("topo already exists: %d", t.Schema))
 			return
 		}
 		this.TopoMap[t.Schema] = t
 	}
 
 	this.ServerMap = make(map[int32]*Server)
-	for _, s := range this.servers {
+	for _, s := range this.Servers {
 		if s.Schema < 0 {
 			err.Error(fmt.Errorf("illegal server schema: %d", s.Schema))
+			return
+		}
+		if _, ok := this.ServerMap[s.Schema]; ok {
+			err.Error(fmt.Errorf("server already exists: %d", s.Schema))
 			return
 		}
 		this.ServerMap[s.Schema] = s
 	}
 
 	this.ClientMap = make(map[int32]*Client)
-	for _, c := range this.clients {
+	for _, c := range this.Clients {
 		if c.Schema < 0 {
 			err.Error(fmt.Errorf("illegal client schema: %d", c.Schema))
+			return
+		}
+		if _, ok := this.ClientMap[c.Schema]; ok {
+			err.Error(fmt.Errorf("server already exists: %d", c.Schema))
 			return
 		}
 		this.ClientMap[c.Schema] = c

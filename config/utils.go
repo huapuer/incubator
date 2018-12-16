@@ -125,16 +125,18 @@ func GetAttrInt32(attrs interface{}, key string, check func(string, int32) maybe
 		ret.Error(fmt.Errorf("attr not exists: %s", key))
 		return
 	}
-	val, ok := attr.(int32)
+
+	val, ok := attr.(float64)
 	if !ok {
 		ret.Error(fmt.Errorf("attr type error(expecting int32) %s: %v", key, attr))
+		return
 	}
 
 	if check != nil {
-		check(key, val).Test()
+		check(key, int32(val)).Test()
 	}
 
-	ret.Value(val)
+	ret.Value(int32(val))
 	return
 }
 
@@ -146,16 +148,16 @@ func GetAttrInt64(attrs interface{}, key string, check func(string, int64) maybe
 		ret.Error(fmt.Errorf("attr not exists: %s", key))
 		return
 	}
-	val, ok := attr.(int64)
+	val, ok := attr.(float64)
 	if !ok {
 		ret.Error(fmt.Errorf("attr type error(expecting int64) %s: %v", key, attr))
 	}
 
 	if check != nil {
-		check(key, val).Test()
+		check(key, int64(val)).Test()
 	}
 
-	ret.Value(val)
+	ret.Value(int64(val))
 	return
 }
 
@@ -167,16 +169,16 @@ func GetAttrInt(attrs interface{}, key string, check func(string, int) maybe.May
 		ret.Error(fmt.Errorf("attr not exists: %s", key))
 		return
 	}
-	val, ok := attr.(int)
+	val, ok := attr.(float64)
 	if !ok {
 		ret.Error(fmt.Errorf("attr type error(expecting int) %s: %v", key, attr))
 	}
 
 	if check != nil {
-		check(key, val).Test()
+		check(key, int(val)).Test()
 	}
 
-	ret.Value(val)
+	ret.Value(int(val))
 	return
 }
 

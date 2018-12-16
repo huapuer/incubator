@@ -16,6 +16,8 @@ func RegisterClientPrototype(name string, val interfaces.Client) (err maybe.Mayb
 		return
 	}
 	clientPrototypes[name] = val
+
+	err.Error(nil)
 	return
 }
 

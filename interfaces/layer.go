@@ -29,6 +29,8 @@ func AddLayer(cfg Config) (err maybe.MaybeError) {
 	if prototype, ok := layerPrototype[cfg.GetLayerClass()]; ok {
 		layer := prototype.New(cfg.GetLayerAttr(), cfg).(MaybeLayer).Right()
 		layers[cfg.GetLayerId()] = layer
+
+		err.Error(nil)
 		return
 	}
 	err.Error(fmt.Errorf("layer prototype not found: %s", cfg.GetLayerClass()))
@@ -83,7 +85,7 @@ func (this MaybeLayer) New(attr interface{}, cfg Config) IOC {
 	panic("not implemented.")
 }
 
-func (this MaybeLayer) Value(value Layer) {
+func (this *MaybeLayer) Value(value Layer) {
 	this.Error(nil)
 	this.value = value
 }

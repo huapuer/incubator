@@ -16,10 +16,11 @@ func (this *ActorHeartbeatMessage) Process(runner interfaces.Actor) (err maybe.M
 	runner.SetState(runner, "health_til", time.Now().Unix(), 0, nil)
 
 	go func() {
-		<-time.After(this.Interval)
+		<-time.After(this.Interval * time.Millisecond)
 		runner.Receive(this)
 	}()
 
+	err.Error(nil)
 	return
 }
 

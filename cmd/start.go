@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/incubator/common/maybe"
 	"github.com/incubator/config"
+	_ "github.com/incubator/host"
 	"github.com/incubator/interfaces"
 	_ "github.com/incubator/layer"
+	_ "github.com/incubator/topo"
 	"io/ioutil"
 	"os"
 )
@@ -14,39 +17,44 @@ import (
 func main() {
 	//TODO: init log module
 
-	starMode := flag.String("mode", "new", "start mode")
-	flag.Parse()
+	maybe.TryCatch(
+		func() {
+			starMode := flag.String("mode", "new", "start mode")
+			flag.Parse()
 
-	file, e := ioutil.ReadFile("./start.json")
-	if e != nil {
-		fmt.Printf("File error: %v\n", e)
-		os.Exit(1)
-	}
-	fmt.Printf("%s\n", string(file))
+			file, e := ioutil.ReadFile("./start.json")
+			if e != nil {
+				fmt.Printf("File error: %v\n", e)
+				os.Exit(1)
+			}
+			fmt.Printf("%s\n", string(file))
 
-	cfg := config.Config{}
-	err := json.Unmarshal(file, &cfg)
-	if err != nil {
-		fmt.Printf("unmarshal cfg failed: %v\n", err)
-		os.Exit(1)
-	}
+			cfg := config.Config{}
+			err := json.Unmarshal(file, &cfg)
+			if err != nil {
+				fmt.Printf("unmarshal cfg failed: %v\n", err)
+				os.Exit(1)
+			}
 
-	cfg.Layer.Id = 0
+			cfg.Layer.Id = 0
 
-	fmt.Printf("%+v", cfg)
+			fmt.Printf("%+v", cfg)
 
-	switch *starMode {
-	case "new":
-		cfg.Layer.StartMode = config.LAYER_START_MODE_NEW
-	case "recover":
-		cfg.Layer.StartMode = config.LAYER_START_MODE_RECOVER
-	case "reboot":
-		cfg.Layer.StartMode = config.LAYER_START_MODE_REBOOT
-	default:
-		fmt.Printf("unknow start mode: %d\n", *starMode)
-		os.Exit(1)
-	}
+			switch *starMode {
+			case "new":
+				cfg.Layer.StartMode = config.LAYER_START_MODE_NEW
+			case "recover":
+				cfg.Layer.StartMode = config.LAYER_START_MODE_RECOVER
+			case "reboot":
+				cfg.Layer.StartMode = config.LAYER_START_MODE_REBOOT
+			default:
+				fmt.Printf("unknow start mode: %d\n", *starMode)
+				os.Exit(1)
+			}
 
-	cfg.Process().Test()
-	interfaces.GetLayer(cfg.Layer.Id).Right().Start()
+			cfg.Process().Test()
+			interfaces.GetLayer(cfg.Layer.Id).Right().Start()
+
+			select {}
+		}, nil)
 }

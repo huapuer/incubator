@@ -54,6 +54,7 @@ func (this *spikeActor) Start(ctx context.Context) (err maybe.MaybeError) {
 
 	this.ctx = ctx
 
+	err.Error(nil)
 	return
 }
 

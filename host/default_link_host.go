@@ -14,7 +14,7 @@ const (
 )
 
 func init() {
-	RegisterHostPrototype(defaultLinkHostClassName, &defaultLinkHost{}).Test()
+	interfaces.RegisterHostPrototype(defaultLinkHostClassName, &defaultLinkHost{}).Test()
 }
 
 type defaultLinkHost struct {
@@ -44,14 +44,14 @@ func (this defaultLinkHost) GetSize() int32 {
 func (this defaultLinkHost) Get(key int64, ptr unsafe.Pointer) bool {
 	var h interfaces.Host
 	h = &defaultLinkHost{}
-	serialization.Ptr2IFace(&h, ptr)
+	serialization.Ptr2IFace(unsafe.Pointer(&h), ptr)
 	return h.GetId() == key
 }
 
 func (this defaultLinkHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
 	var h interfaces.Host
 	h = &defaultLinkHost{}
-	serialization.Ptr2IFace(&h, dst)
+	serialization.Ptr2IFace(unsafe.Pointer(&h), dst)
 	if h.GetId() == storage.DENSE_TABLE_ELEMENT_STATE_EMPTY {
 		serialization.Move(dst, src, int(this.GetSize()))
 		return true
@@ -62,7 +62,7 @@ func (this defaultLinkHost) Put(dst unsafe.Pointer, src unsafe.Pointer) bool {
 func (this defaultLinkHost) Erase(key int64, ptr unsafe.Pointer) bool {
 	var h interfaces.Host
 	h = &defaultLinkHost{}
-	serialization.Ptr2IFace(&h, ptr)
+	serialization.Ptr2IFace(unsafe.Pointer(&h), ptr)
 	if h.GetId() == key {
 		h.SetId(storage.DENSE_TABLE_ELEMENT_STATE_EMPTY)
 	}

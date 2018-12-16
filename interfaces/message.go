@@ -53,7 +53,7 @@ type MaybeRemoteMessage struct {
 	value RemoteMessage
 }
 
-func (this MaybeRemoteMessage) Value(value RemoteMessage) {
+func (this *MaybeRemoteMessage) Value(value RemoteMessage) {
 	this.Error(nil)
 	this.value = value
 }

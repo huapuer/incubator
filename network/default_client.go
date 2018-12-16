@@ -30,7 +30,7 @@ type defaultClient struct {
 	p       interfaces.Protocal
 }
 
-func (this *defaultClient) New(attrs interface{}, cfg config.Config) interfaces.IOC {
+func (this *defaultClient) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
 	ret := interfaces.MaybeClient{}
 
 	maxIdle := config.GetAttrInt32(attrs, "MaxIdle", config.CheckInt32GT0).Right()

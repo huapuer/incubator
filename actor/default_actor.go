@@ -62,6 +62,7 @@ func (this *defaultActor) Start(ctx context.Context) (err maybe.MaybeError) {
 		}
 	}(ctx)
 
+	err.Error(nil)
 	return
 }
 

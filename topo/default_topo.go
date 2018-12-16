@@ -6,7 +6,6 @@ import (
 	"github.com/incubator/common/maybe"
 	"github.com/incubator/config"
 	"github.com/incubator/global"
-	"github.com/incubator/host"
 	"github.com/incubator/interfaces"
 	"github.com/incubator/message"
 	"github.com/incubator/persistence"
@@ -22,8 +21,6 @@ const (
 
 	LocalHostPersistentClass = "LOCALHOST"
 	LinkPersistentClass      = "LINK"
-
-	HostSlotSize = 10
 )
 
 func init() {
@@ -32,8 +29,8 @@ func init() {
 
 type defaultTopo struct {
 	persistence.CommomPersistentable
+	commonTopo
 
-	layer              int32
 	totalHostNum       int64
 	totalRemoteHostNum int32
 	linkRadius         int64
@@ -110,7 +107,7 @@ func (this defaultTopo) New(attrs interface{}, cfg interfaces.Config) interfaces
 			return ret
 		}
 
-		h := host.GetHostPrototype(remoteHostCfg.Class).Right().New(remoteHostAttr, cfg).(interfaces.MaybeHost).Right()
+		h := interfaces.GetHostPrototype(remoteHostCfg.Class).Right().New(remoteHostAttr, cfg).(interfaces.MaybeHost).Right()
 		h.SetId(int64(i))
 		h.SetIP(ip)
 		h.SetPort(port)
@@ -133,7 +130,7 @@ func (this defaultTopo) New(attrs interface{}, cfg interfaces.Config) interfaces
 		ret.Error(fmt.Errorf("total host num is not times of remote num: %d / %d", topo.totalHostNum, topo.remoteNum))
 		return ret
 	}
-	topo.localHostCanon = host.GetHostPrototype(localHostCfg.Class).Right()
+	topo.localHostCanon = interfaces.GetHostPrototype(localHostCfg.Class).Right()
 
 	switch cfg.(*config.Config).Layer.StartMode {
 	case config.LAYER_START_MODE_RECOVER:
@@ -182,7 +179,7 @@ func (this defaultTopo) New(attrs interface{}, cfg interfaces.Config) interfaces
 			if mod >= topo.localHostMod && mod < topo.localHostMod+topo.backupFactor {
 				localHost := topo.localHostCanon.New(localHostCfg.Attributes, cfg).(interfaces.MaybeHost).Right()
 				localHost.SetId(int64(i))
-				topo.localHosts.Put(0, int64(i), serialization.IFace2Ptr(&localHost))
+				topo.localHosts.Put(0, int64(i), serialization.IFace2Ptr(unsafe.Pointer(&localHost)))
 			}
 		}
 	default:
@@ -195,7 +192,7 @@ func (this defaultTopo) New(attrs interface{}, cfg interfaces.Config) interfaces
 		ret.Error(fmt.Errorf("no link cfg found: %d", topo.localHostSchema))
 		return ret
 	}
-	topo.linkCanon = host.GetHostPrototype(linkCfg.Class).Right()
+	topo.linkCanon = interfaces.GetHostPrototype(linkCfg.Class).Right()
 
 	linkSparseEntries := config.GetAttrMapEfaceArray(attrs, "LinkSparseEntries").Right().([]map[string]interface{})
 
@@ -300,14 +297,10 @@ func (this defaultTopo) GetRemoteHostId(idx int32) int64 {
 func (this defaultTopo) SendToHost(id int64, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	mod := int32(id % (int64(this.remoteNum)))
 
-	hosts := make([]interfaces.Host, HostSlotSize, 0)
-	for offset := int32(0); offset < this.backupFactor-1; offset++ {
-		ridx := (mod + offset) % (this.remoteNum)
-		hosts = append(hosts, this.remoteHosts[ridx])
-	}
-
 	masterSended := false
-	for i, h := range hosts {
+	for i := int32(0); i < this.backupFactor-1; i++ {
+		ridx := (mod + i) % (this.remoteNum)
+		h := this.remoteHosts[ridx]
 		if !h.IsHealth() {
 			continue
 		}
@@ -320,12 +313,12 @@ func (this defaultTopo) SendToHost(id int64, msg interfaces.RemoteMessage) (err 
 				return
 			}
 
-			h := this.localHostCanon
+			lh := this.localHostCanon
 			ptr := this.localHosts.Get(0, int64(idx)).Right()
-			serialization.Ptr2IFace(&h, ptr)
+			serialization.Ptr2IFace(unsafe.Pointer(&lh), ptr)
 
-			realhost = h
-			msg.SetHostId(h.GetId())
+			realhost = lh
+			msg.SetHostId(lh.GetId())
 		} else {
 			msg.SetHostId(this.GetRemoteHostId(int32(realhost.GetId())))
 		}
@@ -362,7 +355,7 @@ func (this defaultTopo) LookupHost(id int64) (ret interfaces.MaybeHost) {
 
 		h := this.localHostCanon
 		ptr := this.localHosts.Get(0, int64(idx)).Right()
-		serialization.Ptr2IFace(&h, ptr)
+		serialization.Ptr2IFace(unsafe.Pointer(&h), ptr)
 		ret.Value(h)
 		return
 	} else {
@@ -374,12 +367,6 @@ func (this defaultTopo) LookupHost(id int64) (ret interfaces.MaybeHost) {
 ////go:noescape
 func (this defaultTopo) SendToLink(hid int64, gid int64, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
 	mod := int32(hid % (int64(this.remoteNum)))
-	blk := int32(hid/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
-
-	if blk > int32(this.links.BlockLen()) {
-		err.Error(fmt.Errorf("master host id exceeds local host range: %d", hid))
-		return
-	}
 
 	idx := gid - hid - 1
 	if idx < -this.linkRadius || idx > this.linkRadius {
@@ -388,38 +375,40 @@ func (this defaultTopo) SendToLink(hid int64, gid int64, msg interfaces.RemoteMe
 	}
 	idx += this.linkRadius
 
-	hosts := make([]interfaces.Host, HostSlotSize, 0)
-
-	if mod == this.localHostMod {
-		h := this.linkCanon
-		ptr := this.links.Get(int64(blk), int64(blk)).Right()
-		serialization.Ptr2IFace(&h, ptr)
-		hosts = append(hosts, h)
-	} else {
-		hosts = append(hosts, this.remoteHosts[mod])
-	}
-	if mod < this.localHostMod+this.backupFactor {
-		h := this.linkCanon
-		ptr := this.links.Get(int64(blk), int64(blk)).Right()
-		serialization.Ptr2IFace(&h, ptr)
-		hosts = append(hosts, h)
-	}
-	for offset := int32(0); offset < this.backupFactor-1; offset++ {
-		ridx := (mod + offset) % (this.remoteNum)
-		hosts = append(hosts, this.remoteHosts[ridx])
-	}
-
 	masterSended := false
-	for _, h := range hosts {
-		if h.IsHealth() {
-			if !masterSended {
-				msg.Master(message.MASTER_YES)
-				masterSended = true
-			} else {
-				msg.Master(message.MASTER_NO)
-			}
-			h.Receive(msg).Test()
+	for i := int32(0); i < this.backupFactor-1; i++ {
+		ridx := (mod + i) % (this.remoteNum)
+		h := this.remoteHosts[ridx]
+		if !h.IsHealth() {
+			continue
 		}
+
+		realhost := h
+		if mod+int32(i) == this.localHostMod || mod+int32(i) < this.localHostMod+this.backupFactor {
+			blk := int32(hid/int64(this.remoteNum)/int64(this.backupFactor+1)) + mod
+			if blk > int32(this.localHosts.ElemLen()) {
+				err.Error(fmt.Errorf("master host id exceeds local host range: %d", blk))
+				return
+			}
+
+			lh := this.linkCanon
+			ptr := this.links.Get(int64(blk), int64(idx)).Right()
+			serialization.Ptr2IFace(unsafe.Pointer(&h), ptr)
+			realhost = lh
+
+			msg.SetHostId(lh.GetId())
+		} else {
+			msg.SetHostId(this.GetRemoteHostId(int32(realhost.GetId())))
+		}
+
+		if !masterSended {
+			msg.Master(message.MASTER_YES)
+			masterSended = true
+		} else {
+			msg.Master(message.MASTER_NO)
+		}
+
+		realhost.Receive(msg).Test()
 	}
 
 	if !masterSended {
@@ -465,14 +454,6 @@ func (this defaultTopo) Start() {
 			hm.Start().Test()
 		}
 	}
-}
-
-func (this defaultTopo) GetLayer() int32 {
-	return this.layer
-}
-
-func (this *defaultTopo) SetLayer(layer int32) {
-	this.layer = layer
 }
 
 func (this defaultTopo) GetAddr() string {

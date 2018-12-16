@@ -19,7 +19,7 @@ type MaybeProtocal struct {
 	value Protocal
 }
 
-func (this MaybeProtocal) Value(value Protocal) {
+func (this *MaybeProtocal) Value(value Protocal) {
 	this.Error(nil)
 	this.value = value
 }

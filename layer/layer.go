@@ -43,6 +43,7 @@ func (this *CommonLayer) Init(attrs interface{}, cfg *config.Config) (err maybe.
 	this.space = cfg.Layer.Space
 
 	this.messageRouters = make(map[int32]interfaces.Router)
+	this.routers = make(map[int32]interfaces.Router)
 
 	this.messageClassToType = make(map[int]int32)
 	this.messageCanonicalFromType = make(map[int32]interfaces.RemoteMessage)

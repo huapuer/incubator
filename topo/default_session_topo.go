@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/incubator/common/maybe"
 	"github.com/incubator/config"
-	"github.com/incubator/host"
 	"github.com/incubator/interfaces"
 	"net"
 	"unsafe"
@@ -19,15 +18,17 @@ func init() {
 }
 
 type defaultSessionTopo struct {
+	commonTopo
+
 	hostSchema int32
-	hosts      map[int64]host.SessionHost
-	hostCanon  host.SessionHost
+	hosts      map[int64]interfaces.SessionHost
+	hostCanon  interfaces.SessionHost
 }
 
 func (this defaultSessionTopo) New(attrs interface{}, cfg interfaces.Config) interfaces.IOC {
 	ret := interfaces.MaybeTopo{}
 	topo := &defaultSessionTopo{
-		hosts: make(map[int64]host.SessionHost),
+		hosts: make(map[int64]interfaces.SessionHost),
 	}
 
 	topo.hostSchema = config.GetAttrInt32(attrs, "LocalHostSchema", config.CheckInt32GT0).Right()
@@ -37,7 +38,7 @@ func (this defaultSessionTopo) New(attrs interface{}, cfg interfaces.Config) int
 		ret.Error(fmt.Errorf("no local host cfg found: %d", topo.hostSchema))
 		return ret
 	}
-	topo.hostCanon = host.GetHostPrototype(localHostCfg.Class).Right().(host.SessionHost)
+	topo.hostCanon = interfaces.GetHostPrototype(localHostCfg.Class).Right().(interfaces.SessionHost)
 
 	ret.Value(topo)
 	return ret
@@ -48,7 +49,7 @@ func (this *defaultSessionTopo) AddHost(id int64, conn net.Conn) (err maybe.Mayb
 		err.Error(fmt.Errorf("host already exsits: %d", id))
 		return
 	}
-	host := this.hostCanon.Replicate().Right().(host.SessionHost)
+	host := this.hostCanon.Replicate().Right().(interfaces.SessionHost)
 	host.SetPeer(conn)
 	this.hosts[id] = host
 
@@ -89,17 +90,7 @@ func (this defaultSessionTopo) GetRemoteHostId(idx int32) int64 {
 	panic("not implemented")
 }
 
-func (this defaultSessionTopo) Start() {
-	panic("not implemented")
-}
-
-func (this defaultSessionTopo) GetLayer() int32 {
-	panic("not implemented")
-}
-
-func (this *defaultSessionTopo) SetLayer(layer int32) {
-	panic("not implemented")
-}
+func (this defaultSessionTopo) Start() {}
 
 func (this defaultSessionTopo) GetAddr() string {
 	panic("not implemented")

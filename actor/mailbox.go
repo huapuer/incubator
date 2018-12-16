@@ -14,5 +14,6 @@ func (this *mailBox) Init(attrs interface{}, cfg *config.Config) (err maybe.Mayb
 	size := config.GetAttrInt(attrs, "MailBoxSize", config.CheckIntGT0).Right()
 	this.mailbox = make(chan interfaces.Message, size)
 
+	err.Error(nil)
 	return
 }

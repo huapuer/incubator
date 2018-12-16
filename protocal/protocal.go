@@ -21,6 +21,8 @@ func RegisterProtocalPrototype(name string, val interfaces.Protocal) (err maybe.
 		return
 	}
 	protocalPrototypes[name] = val
+
+	err.Error(nil)
 	return
 }
 
