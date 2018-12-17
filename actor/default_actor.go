@@ -73,5 +73,7 @@ func (this *defaultActor) Receive(msg interfaces.Message) (err maybe.MaybeError)
 	}
 
 	this.mailbox <- msg
+
+	err.Error(nil)
 	return
 }

@@ -92,9 +92,11 @@ func (this *PullUpMessage) SetJsonField(data []byte) (err maybe.MaybeError) {
 	if e != nil {
 		err.Error(e)
 	}
+
+	err.Error(nil)
 	return
 }
 
-func (this *PullUpMessage) GetSize() int32 {
-	return int32(unsafe.Sizeof(*this))
+func (this PullUpMessage) GetSize() int32 {
+	return int32(unsafe.Sizeof(this))
 }

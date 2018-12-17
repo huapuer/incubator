@@ -11,7 +11,7 @@ import (
 func RoutePackage(data []byte, layerId uint8, typ uint8) (err maybe.MaybeError) {
 	l := interfaces.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
-	serialization.UnmarshalRemoteMessage(data, msg).Test()
+	serialization.UnmarshalRemoteMessage(data, &msg).Test()
 	router := l.GetRouter(int32(typ)).Right()
 	router.Route(msg).Test()
 	return
@@ -22,6 +22,8 @@ func Route(m interfaces.RemoteMessage) (err maybe.MaybeError) {
 	l := interfaces.GetLayer(int32(m.GetLayer())).Right()
 	router := l.GetRouter(int32(m.GetType())).Right()
 	router.Route(m).Test()
+
+	err.Error(nil)
 	return
 }
 

@@ -63,6 +63,7 @@ func (this dummyRouter) Route(msg interfaces.RemoteMessage) (err maybe.MaybeErro
 
 	this.actor.Receive(msg).Test()
 
+	err.Error(nil)
 	return
 }
 

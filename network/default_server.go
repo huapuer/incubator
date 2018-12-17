@@ -28,12 +28,14 @@ func (this defaultServer) New(attrs interface{}, cfg interfaces.Config) interfac
 	network := config.GetAttrString(attrs, "Network", config.CheckStringNotEmpty).Right()
 	handlerNum := config.GetAttrInt(attrs, "HandlerNum", config.CheckIntGT0).Right()
 	protocalClass := config.GetAttrString(attrs, "Protocal", config.CheckStringNotEmpty).Right()
+	bufferSize := config.GetAttrInt(attrs, "BufferSize", config.CheckIntGT0).Right()
 
 	s := &defaultServer{
 		commonServer{
 			network:    network,
 			handlerNum: handlerNum,
 			p:          protocal.GetProtocalPrototype(protocalClass).Right(),
+			bufferSize: bufferSize,
 		},
 	}
 	s.Inherit(s)
@@ -48,8 +50,10 @@ func (this defaultServer) HandlePackage(data []byte, c net.Conn) (err maybe.Mayb
 
 	l := interfaces.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
-	serialization.UnmarshalRemoteMessage(data, msg).Test()
+	serialization.UnmarshalRemoteMessage(data, &msg).Test()
 
 	message.Route(msg).Test()
+
+	err.Error(nil)
 	return
 }

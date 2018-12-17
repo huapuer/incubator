@@ -40,24 +40,26 @@ func Unmarshal(data []byte, obj interfaces.Serializable) (err maybe.MaybeError) 
 		obj.SetJsonField(jsn).Test()
 	}
 
+	err.Error(nil)
 	return
 }
 
 ////go:noescape
-func UnmarshalRemoteMessage(data []byte, msg interfaces.RemoteMessage) (err maybe.MaybeError) {
+func UnmarshalRemoteMessage(data []byte, msg *interfaces.RemoteMessage) (err maybe.MaybeError) {
 	lth := int32(len(data))
-	lval := msg.GetSize()
+	lval := (*msg).GetSize()
 
 	val := data[:lval]
 	ms := (*mimicSlice)(unsafe.Pointer(&val))
-	mi := (*mimicIFace)(unsafe.Pointer(&msg))
+	mi := (*mimicIFace)(unsafe.Pointer(msg))
 	mi.data = ms.addr
 
 	ljsn := lth - lval
 	if ljsn > 0 {
-		jsn := data[lval+2 : lth]
-		msg.SetJsonField(jsn).Test()
+		jsn := data[lval:lth]
+		(*msg).SetJsonField(jsn).Test()
 	}
 
+	err.Error(nil)
 	return
 }

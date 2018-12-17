@@ -25,9 +25,9 @@ func (this fixedHeaderProtocal) New(attrs interface{}, cfg interfaces.Config) in
 ////go:noescape
 func (this *fixedHeaderProtocal) Pack(msg interfaces.RemoteMessage) (ret []byte) {
 	bytes := serialization.Marshal(msg)
-	lth := len(bytes) + 1 + int(unsafe.Sizeof(int32(0)))
+	lth := len(bytes) + int(unsafe.Sizeof(int32(0)))
 
-	ret = append(ret, uint8(lth))
+	ret = serialization.Ptr2Bytes(unsafe.Pointer(&lth), int(unsafe.Sizeof(int32(0))))
 	ret = append(ret, bytes...)
 
 	return
@@ -38,12 +38,13 @@ func (this *fixedHeaderProtocal) Parse(data []byte) (int, int) {
 	if l < 4 {
 		return PROTOCAL_PARSE_STATE_SHORT, 0
 	}
-	lth := int(data[0])
+	var lth int
+	serialization.MoveBytes(unsafe.Pointer(&lth), data, int(unsafe.Sizeof(int32(0))))
 	if lth < 0 {
 		return PROTOCAL_PARSE_STATE_ERROR, 0
 	}
-	if l != lth {
-		return PROTOCAL_PARSE_STATE_ERROR, 0
+	if l < lth {
+		return PROTOCAL_PARSE_STATE_SHORT, 0
 	}
 
 	return lth, int(unsafe.Sizeof(int32(0)))

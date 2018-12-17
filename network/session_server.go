@@ -29,11 +29,13 @@ func (this sessionServer) New(attrs interface{}, cfg interfaces.Config) interfac
 
 	network := config.GetAttrString(attrs, "Network", config.CheckStringNotEmpty).Right()
 	protocalClass := config.GetAttrString(attrs, "Protocal", config.CheckStringNotEmpty).Right()
+	bufferSize := config.GetAttrInt(attrs, "BufferSize", config.CheckIntGT0).Right()
 
 	s := &sessionServer{
 		commonServer{
-			network: network,
-			p:       protocal.GetProtocalPrototype(protocalClass).Right(),
+			network:    network,
+			p:          protocal.GetProtocalPrototype(protocalClass).Right(),
+			bufferSize: bufferSize,
 		},
 	}
 	s.Inherit(s)
@@ -48,12 +50,14 @@ func (this sessionServer) HandlePackage(data []byte, c net.Conn) (err maybe.Mayb
 
 	l := interfaces.GetLayer(int32(layerId)).Right()
 	msg := l.GetMessageCanonicalFromType(int32(typ)).Right()
-	serialization.UnmarshalRemoteMessage(data, msg).Test()
+	serialization.UnmarshalRemoteMessage(data, &msg).Test()
 
 	sessId := rand.Int63()
 
 	l.GetTopo().(topo.SessionTopo).AddHost(sessId, c).Test()
 	msg.(interfaces.RemoteMessage).SetHostId(sessId)
 	message.Route(msg).Test()
+
+	err.Error(nil)
 	return
 }

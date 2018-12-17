@@ -8,6 +8,7 @@ import (
 	"github.com/incubator/config"
 	_ "github.com/incubator/host"
 	"github.com/incubator/interfaces"
+	_ "github.com/incubator/io"
 	_ "github.com/incubator/layer"
 	_ "github.com/incubator/topo"
 	"io/ioutil"

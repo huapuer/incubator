@@ -62,7 +62,7 @@ func (this *CommonLayer) Init(attrs interface{}, cfg *config.Config) (err maybe.
 		_type := serialization.Eface2TypeInt(msgCanon)
 		this.messageClassToType[_type] = msgCfg.Type
 
-		r, ok := this.routers[msgCfg.RouterId]
+		_, ok := this.routers[msgCfg.RouterId]
 		if !ok {
 			routerCfg, ok := cfg.RouterMap[msgCfg.RouterId]
 			if !ok {
@@ -73,7 +73,7 @@ func (this *CommonLayer) Init(attrs interface{}, cfg *config.Config) (err maybe.
 			this.routers[msgCfg.RouterId] = router.GetRouterPrototype(routerCfg.Class).
 				Right().New(routerCfg.Attributes, cfg).(interfaces.MaybeRouter).Right()
 		}
-		this.messageRouters[msgCfg.Type] = r
+		this.messageRouters[msgCfg.Type] = this.routers[msgCfg.RouterId]
 	}
 
 	if cfg.IO.Class != "" {
@@ -89,7 +89,7 @@ func (this *CommonLayer) Init(attrs interface{}, cfg *config.Config) (err maybe.
 }
 
 func (this CommonLayer) GetRouter(id int32) (ret interfaces.MaybeRouter) {
-	if val, ok := this.routers[id]; ok {
+	if val, ok := this.messageRouters[id]; ok {
 		ret.Value(val)
 		return
 	}

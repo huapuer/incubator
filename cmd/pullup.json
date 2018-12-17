@@ -24,7 +24,8 @@
       "Attributes":{
         "Network":"tcp",
         "HandlerNum":100,
-        "Protocal":"protocal.fixedHeaderProtocal"
+        "Protocal":"protocal.fixedHeaderProtocal",
+        "BufferSize": 256
       }
     }
   ],

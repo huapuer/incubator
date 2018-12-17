@@ -18,15 +18,15 @@ import (
 type commonServer struct {
 	class.Class
 
-	network        string
-	port           int
-	readBufferSize int
-	packageBuffer  []byte
-	packageSize    int
-	headerSize     int
-	p              interfaces.Protocal
-	derived        interfaces.Server
-	handlerNum     int
+	network       string
+	port          int
+	bufferSize    int
+	packageBuffer []byte
+	packageSize   int
+	headerSize    int
+	p             interfaces.Protocal
+	derived       interfaces.Server
+	handlerNum    int
 }
 
 func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
@@ -45,7 +45,7 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 		return
 	}
 
-	this.packageBuffer = make([]byte, this.readBufferSize, 0)
+	this.packageBuffer = make([]byte, 0, this.bufferSize)
 
 	l, e := net.Listen(this.network, fmt.Sprintf("0.0.0.0:%d", this.port))
 	if e != nil {
@@ -83,7 +83,7 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 func (this commonServer) HandleConnection(ctx context.Context, c net.Conn) {
 	defer c.Close()
 	reader := bufio.NewReader(c)
-	buffer := make([]byte, this.readBufferSize)
+	buffer := make([]byte, this.bufferSize, this.bufferSize)
 	for {
 		select {
 		case <-ctx.Done():
@@ -107,27 +107,28 @@ func (this commonServer) HandlePacakge(data []byte, c net.Conn) (err maybe.Maybe
 }
 
 ////go:noescape
-func (this commonServer) HandleData(data []byte, l int, c net.Conn) (err maybe.MaybeError) {
+func (this *commonServer) HandleData(data []byte, l int, c net.Conn) (err maybe.MaybeError) {
 	if l == 0 {
 		err.Error(errors.New("empty data"))
 		return
 	}
 	this.packageBuffer = append(this.packageBuffer, data...)
-	if this.packageSize == protocal.PROTOCAL_PARSE_STATE_SHORT {
-		this.packageSize, this.headerSize = this.p.Parse(data)
-	}
-	if this.packageSize >= 0 {
-		if this.readBufferSize >= this.packageSize {
-			pkg := this.packageBuffer[this.headerSize:this.packageSize]
-			this.packageBuffer = this.packageBuffer[this.packageSize:]
-			this.derived.HandlePackage(this.p.Decode(pkg), c).Test()
+	for {
+		this.packageSize, this.headerSize = this.p.Parse(this.packageBuffer)
+		if this.packageSize == protocal.PROTOCAL_PARSE_STATE_SHORT {
+			break
+		} else if this.packageSize == protocal.PROTOCAL_PARSE_STATE_ERROR {
 			this.packageSize = protocal.PROTOCAL_PARSE_STATE_SHORT
+			this.packageBuffer = make([]byte, this.bufferSize, 0)
+			break
 		}
-	} else if this.packageSize == protocal.PROTOCAL_PARSE_STATE_ERROR {
-		this.packageSize = protocal.PROTOCAL_PARSE_STATE_SHORT
-		this.packageBuffer = make([]byte, this.readBufferSize, 0)
+
+		pkg := this.packageBuffer[this.headerSize:this.packageSize]
+		this.packageBuffer = this.packageBuffer[this.packageSize:]
+		this.derived.HandlePackage(this.p.Decode(pkg), c).Test()
 	}
 
+	err.Error(nil)
 	return
 }
 
