@@ -39,6 +39,7 @@ type Server interface {
 	HandleData([]byte, int, net.Conn) maybe.MaybeError
 	HandlePackage([]byte, net.Conn) maybe.MaybeError
 	SetPort(int)
+	GetProtocal() Protocal
 }
 
 type MaybeServer struct {

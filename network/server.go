@@ -52,26 +52,27 @@ func (this commonServer) Start(ctx context.Context) (err maybe.MaybeError) {
 		err.Error(e)
 		return
 	}
-	defer l.Close()
 	rand.Seed(time.Now().Unix())
 
 	go func() {
+		defer l.Close()
 		for {
 			select {
 			case <-ctx.Done():
 				err.Error(nil)
 				return
+			default:
+				break
 			}
+
 			c, e := l.Accept()
 			if e != nil {
 				err.Error(e)
 				return
 			}
-			maybe.TryCatch(func() {
-				for i := 0; i < this.handlerNum; i++ {
-					go this.HandleConnection(ctx, c)
-				}
-			}, nil)
+			for i := 0; i < this.handlerNum; i++ {
+				go this.HandleConnection(ctx, c)
+			}
 		}
 	}()
 
@@ -87,6 +88,8 @@ func (this commonServer) HandleConnection(ctx context.Context, c net.Conn) {
 		select {
 		case <-ctx.Done():
 			return
+		default:
+			break
 		}
 		len, err := reader.Read(buffer)
 		if err != nil {
@@ -134,4 +137,8 @@ func (this *commonServer) Inherit(cobj class.Class) {
 
 func (this *commonServer) SetPort(port int) {
 	this.port = port
+}
+
+func (this commonServer) GetProtocal() interfaces.Protocal {
+	return this.p
 }

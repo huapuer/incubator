@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/incubator/config"
+	_ "github.com/incubator/host"
 	"github.com/incubator/interfaces"
+	_ "github.com/incubator/layer"
 	"github.com/incubator/message"
-	"github.com/incubator/serialization"
+	_ "github.com/incubator/topo"
 	"io/ioutil"
 	"net"
 	"os"
@@ -20,18 +22,12 @@ type node struct {
 }
 
 func main() {
-	layerId := flag.Int("layer", 0, "layer id")
-	nodesFile := flag.String("nodes-file", "", "nodes file")
-	groundLayerFile := flag.String("ground-layer-file", "", "ground layer file")
-	layerFile := flag.String("layer-file", "", "layer file")
+	nodesFile := flag.String("nodes-file", "./nodes.json", "nodes file")
+	groundLayerFile := flag.String("ground-layer-file", "./start.json", "ground layer file")
+	layerFile := flag.String("layer-file", "./pullup.json", "layer file")
 	starMode := flag.String("mode", "new", "start mode")
 
 	flag.Parse()
-
-	if *layerId < 1 {
-		fmt.Printf("illegal layer(<1): %d", *layerId)
-		os.Exit(1)
-	}
 
 	file, e := ioutil.ReadFile(*groundLayerFile)
 	if e != nil {
@@ -63,7 +59,6 @@ func main() {
 		fmt.Printf("Config error: %v\n", e)
 		os.Exit(1)
 	}
-	cfg.Layer.Id = int32(*layerId)
 
 	switch *starMode {
 	case "new":
@@ -103,13 +98,14 @@ func main() {
 			msg.SetLayer(int8(groundCfg.Layer.Id))
 			msg.SetType(int8(groundLayer.GetMessageType(msg).Right()))
 
-			_, e = conn.Write(serialization.Marshal(msg))
+			service := groundLayer.GetService(0).Right()
+			_, e = conn.Write(service.GetProtocal().Pack(msg))
 			if e != nil {
 				fmt.Printf("Send message error: %v\n", e)
 				os.Exit(1)
 			}
 
-			groundLayer.GetService(0).Right().HandleConnection(context.Background(), conn)
+			service.HandleConnection(context.Background(), conn)
 
 			conn.Close()
 			wg.Done()
